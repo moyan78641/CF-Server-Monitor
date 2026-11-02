@@ -1,69 +1,63 @@
 ﻿<template>
   <div id="tab-servers" class="tab-content" :class="{ active: activeTab === 'servers' }">
-    <div class="alert alert-info alert-stack">
-      <div class="alert-line">
-        <span>{{ trans.installCommand }}</span>
-        <HelpTooltip>
-          <span>{{ trans.clickToCopy }} <strong>📋</strong> {{ trans.installCommand }}</span>
-        </HelpTooltip>
-      </div>
+    <div class="admin-node-heading">
+      <div><h2>{{ trans.servers }}<span class="admin-count-pill">{{ servers.length }}</span></h2></div>
+      <div class="admin-inline-actions"><button class="btn" @click="$emit('auto-discovery-cmd')"><AdminIcon name="zap" :size="16" />{{ trans.autoAdd }}</button><button class="btn btn-primary" aria-haspopup="dialog" @click="toggleAdding"><AdminIcon name="plus" :size="17" />{{ trans.addServer }}</button></div>
+    </div>
+    <Teleport to=".admin-app">
+    <div v-if="adding" class="modal-overlay active" @click.self="adding = false">
+      <form class="modal-dialog admin-add-server-dialog" @submit.prevent="$emit('add-server')">
+        <div class="modal-header"><div class="modal-title">{{ trans.addServer }}</div><button type="button" class="modal-close" :aria-label="trans.close" @click="adding = false"><AdminIcon name="x" :size="16" /></button></div>
+        <div class="form-group"><label for="new-server-name" class="form-label">{{ trans.serverName }} <span class="required">*</span></label><input id="new-server-name" ref="nameInput" type="text" v-model="newServerName" required class="form-input" :placeholder="trans.serverName" autocomplete="off" /></div>
+        <div class="form-group"><label for="new-server-group" class="form-label">{{ trans.group }}</label><UiSelect id="new-server-group" v-model="selectedServerGroup" class="form-select"><option v-for="group in serverGroupOptions" :key="group.value" :value="group.value">{{ group.label }}</option><option :value="CUSTOM_SERVER_GROUP_VALUE">{{ trans.custom }}</option></UiSelect><input v-if="showCustomServerGroup" v-model="newServerGroup" type="text" class="form-input mt-2" :aria-label="trans.groupName" :placeholder="trans.groupName" /></div>
+        <div class="modal-footer"><button type="button" class="btn" @click="adding = false">{{ trans.cancel }}</button><button type="submit" class="btn btn-primary" :disabled="addingServer"><AdminIcon :name="addingServer ? 'loader' : 'plus'" :class="{ 'is-spinning': addingServer }" :size="16" />{{ trans.addServer }}</button></div>
+      </form>
     </div>
 
-    <div class="toolbar">
-      <input type="text" v-model="newServerName" class="toolbar-input" :placeholder="'> ' + trans.serverName + '...'">
-      <div class="toolbar-select-wrapper">
-        <select v-model="selectedServerGroup" class="toolbar-select">
-          <option v-for="group in serverGroupOptions" :key="group.value" :value="group.value">{{ group.label }}</option>
-          <option :value="CUSTOM_SERVER_GROUP_VALUE">{{ trans.custom || 'Custom' }}</option>
-        </select>
-        <input
-          v-if="showCustomServerGroup"
-          type="text"
-          v-model="newServerGroup"
-          class="toolbar-select toolbar-custom-input"
-          :placeholder="trans.default || 'Default'"
-        >
-        <button v-if="newServerGroup" @click="newServerGroup = ''" class="toolbar-select-clear" aria-label="Clear">✕</button>
-      </div>
-      <button @click="$emit('add-server')" class="btn btn-primary">+ {{ trans.addServer }}</button>
-      <button @click="$emit('auto-discovery-cmd')" class="btn">🤖 {{ trans.autoAdd }}</button>
+    </Teleport>
+    <div class="admin-node-filters">
+      <div class="admin-search-field"><AdminIcon name="search" :size="17" /><input v-model="search" type="search" :placeholder="trans.adminSearch" :aria-label="trans.adminSearch" /></div>
+      <UiSelect v-model="statusFilter" class="form-select" :aria-label="trans.status"><option value="">{{ trans.adminAllStatus }}</option><option value="online">{{ trans.online }}</option><option value="offline">{{ trans.offline }}</option></UiSelect>
+      <UiSelect v-model="regionFilter" class="form-select" :aria-label="trans.region"><option value="">{{ trans.adminAllRegions }}</option><option v-for="region in regionOptions" :key="region.value" :value="region.value">{{ region.label }}</option></UiSelect>
+      <UiSelect v-model="groupFilter" class="form-select" :aria-label="trans.group"><option value="">{{ trans.adminAllGroups }}</option><option v-for="group in groups.filter(Boolean)" :key="group" :value="group">{{ group }}</option></UiSelect>
+      <details class="admin-column-picker"><summary class="btn"><AdminIcon name="filter" :size="16" />{{ trans.adminColumns }}<AdminIcon name="chevron-down" :size="13" /></summary><div class="admin-column-menu"><label v-for="column in optionalColumns" :key="column.key"><input type="checkbox" :checked="visibleColumns.includes(column.key)" @change="toggleColumn(column.key)" />{{ column.label }}</label></div></details>
     </div>
-
-    <div class="batch-actions">
-      <button @click="$emit('batch-edit')" class="btn btn-blue" :disabled="selectedServers.length === 0">✏️ {{ trans.batchEdit }}</button>
-      <button @click="$emit('batch-delete')" class="btn btn-red">🗑 {{ trans.batchDelete }}</button>
-      <button @click="$emit('toggle-select-all')" class="btn">☐ {{ trans.toggleAll }}</button>
-      <button @click="$emit('refresh-cache')" class="btn" :disabled="cacheRefreshing">{{ cacheRefreshing ? '⏳' : '🔄' }} {{ trans.refreshCache }}</button>
+    <div v-if="search || statusFilter || regionFilter || groupFilter" class="admin-filter-summary"><span>{{ filteredServers.length }} / {{ servers.length }}</span><button class="btn btn-quiet" @click="clearFilters"><AdminIcon name="x" :size="14" />{{ trans.adminClearFilters }}</button></div>
+    <div class="batch-actions"><span class="admin-selection-count">{{ selectedServers.length }} {{ trans.adminSelected }}</span>
+      <button @click="$emit('batch-edit')" class="btn btn-blue" :disabled="selectedServers.length === 0"><AdminIcon name="edit" :size="16" /> {{ trans.batchEdit }}</button>
+      <button @click="$emit('batch-delete')" class="btn btn-red" :disabled="selectedServers.length === 0"><AdminIcon name="trash" :size="16" /> {{ trans.batchDelete }}</button>
+      <button @click="$emit('toggle-select-all', filteredServers.map(server => server.id))" class="btn"><AdminIcon name="check" :size="16" /> {{ trans.toggleAll }}</button>
+      <button @click="$emit('refresh-cache')" class="btn" :disabled="cacheRefreshing"><AdminIcon :name="cacheRefreshing ? 'loader' : 'refresh'" :class="{ 'is-spinning': cacheRefreshing }" /> {{ trans.refreshCache }}</button>
     </div>
 
     <div class="table-wrapper">
-      <table class="terminal-table">
+      <table class="terminal-table"><caption class="admin-sr-only">{{ trans.servers }}</caption>
         <thead>
           <tr>
             <th class="table-center-cell col-width-35">
               <HelpTooltip :text="trans.dragSort" />
             </th>
-            <th class="col-width-30"><input type="checkbox" id="select-all" @change="$emit('select-all', $event)" class="checkbox-accent-green"></th>
-            <th>{{ trans.hostname.toUpperCase() }}</th>
-            <th>IP</th>
-            <th>{{ trans.group.toUpperCase() }}</th>
-            <th>{{ trans.tags.toUpperCase() }}</th>
-            <th>{{ trans.note.toUpperCase() }}</th>
-            <th>{{ trans.price.toUpperCase() }}</th>
-            <th>{{ trans.expirationDate.toUpperCase() }}</th>
-            <th>{{ trans.autoRenewal.toUpperCase() }}</th>
-            <th>{{ trans.traffic.toUpperCase() }}</th>
-            <th>{{ trans.agentVersion.toUpperCase() }}</th>
-            <th>{{ trans.status.toUpperCase() }}</th>
-            <th>{{ trans.actions.toUpperCase() }}</th>
+            <th class="col-width-30"><input type="checkbox" id="select-all" :aria-label="trans.toggleAll" :checked="allVisibleSelected" :indeterminate="someVisibleSelected && !allVisibleSelected" @change="$emit('select-all', { checked: $event.target.checked, ids: filteredServers.map(server => server.id) })" class="checkbox-accent-green"></th>
+            <th>{{ trans.hostname }}</th>
+            <th v-show="visibleColumns.includes('network')">IP</th>
+            <th v-show="visibleColumns.includes('group')">{{ trans.group }}</th>
+            <th v-show="visibleColumns.includes('tags')">{{ trans.tags }}</th>
+            <th v-show="visibleColumns.includes('note')">{{ trans.note }}</th>
+            <th v-show="visibleColumns.includes('billing')">{{ trans.price }}</th>
+            <th v-show="visibleColumns.includes('expiry')">{{ trans.expirationDate }}</th>
+            <th v-show="visibleColumns.includes('renewal')">{{ trans.autoRenewal }}</th>
+            <th v-show="visibleColumns.includes('traffic')">{{ trans.traffic }}</th>
+            <th v-show="visibleColumns.includes('agent')">{{ trans.agentVersion }}</th>
+            <th>{{ trans.status }}</th>
+            <th>{{ trans.actions }}</th>
           </tr>
         </thead>
         <tbody>
-          <tr v-if="servers.length === 0">
-            <td colspan="14" class="empty-state"><span class="empty-icon">📦</span> {{ trans.noServers }}</td>
+          <tr v-if="filteredServers.length === 0">
+            <td colspan="14" class="empty-state"><span class="empty-icon"><AdminIcon name="server" :size="16" /></span><strong>{{ servers.length ? trans.adminNoResults : trans.noServers }}</strong><p>{{ servers.length ? trans.adminSearch : trans.adminEmptyDesc }}</p><button v-if="servers.length" class="btn" @click="clearFilters">{{ trans.adminClearFilters }}</button></td>
           </tr>
           <tr
-            v-for="server in servers"
+            v-for="server in filteredServers"
             :key="server.id"
             class="server-row"
             :data-server-id="server.id"
@@ -76,8 +70,8 @@
               @pointermove="handlePointerMove"
               @pointerup="handlePointerUp"
               @pointercancel="handlePointerCancel"
-            >⋮⋮</td>
-            <td class="table-center-cell"><input type="checkbox" class="server-checkbox" :value="server.id" :checked="selectedServers.includes(server.id)" @change="$emit('toggle-server', server.id)"></td>
+            ><AdminIcon name="grip" :size="16" /></td>
+            <td class="table-center-cell"><input type="checkbox" :aria-label="server.name" class="server-checkbox" :value="server.id" :checked="selectedServers.includes(server.id)" @change="$emit('toggle-server', server.id)"></td>
             <td>
               <div class="server-info">
                 <span v-if="server.region && server.region !== 'xx'" class="country-os-icons">
@@ -85,7 +79,7 @@
                   <OsIcon :os="server.os" />
                 </span>
                 <span v-else class="country-os-icons">
-                  <span class="flag-fallback">🏳️</span>
+                  <span class="flag-fallback"><AdminIcon name="globe" :size="16" /></span>
                   <OsIcon :os="server.os" />
                 </span>
                 <a
@@ -94,7 +88,7 @@
                 >{{ server.name }}</a>
               </div>
             </td>
-            <td>
+            <td v-show="visibleColumns.includes('network')">
               <div
                 v-if="getServerIpRows(server).length"
                 class="server-ip-list"
@@ -111,56 +105,56 @@
               </div>
               <span v-else>-</span>
             </td>
-            <td>{{ server.server_group || trans.default }}</td>
-            <td>
+            <td v-show="visibleColumns.includes('group')">{{ server.server_group || trans.default }}</td>
+            <td v-show="visibleColumns.includes('tags')">
               <div v-if="splitTags(server.tags).length" class="tag-list admin-tag-list">
                 <span v-for="(tag, index) in splitTags(server.tags)" :key="tag" :class="['badge', 'badge-tag', tagColorClass(index)]">{{ tag }}</span>
               </div>
               <span v-else>-</span>
             </td>
-            <td>
+            <td v-show="visibleColumns.includes('note')">
               <span
                 class="note-text"
                 :class="{ 'note-copied': copiedNoteServerId === server.id }"
                 @click.stop="$emit('copy-note', server)"
               >{{ server.note || '-' }}</span>
             </td>
-            <td>
+            <td v-show="visibleColumns.includes('billing')">
               <span
                 class="spec-text"
                 :class="{ 'spec-copied': isSpecCopied(server, 'price') }"
                 @click.stop="emitCopySpec(server, 'price', formatServerPrice(server))"
               >{{ formatServerPrice(server) }}</span>
             </td>
-            <td><span class="date-text">{{ server.expire_date || '-' }}</span></td>
-            <td>
+            <td v-show="visibleColumns.includes('expiry')"><span class="date-text">{{ server.expire_date || '-' }}</span></td>
+            <td v-show="visibleColumns.includes('renewal')">
               <span
                 class="renewal-text"
               >{{ isServerAutoRenewal(server) ? trans.enabled : trans.disabled }}</span>
             </td>
-            <td>
+            <td v-show="visibleColumns.includes('traffic')">
               <span
                 class="spec-text"
                 :class="{ 'spec-copied': isSpecCopied(server, 'traffic_limit') }"
                 @click.stop="emitCopySpec(server, 'traffic_limit', server.traffic_limit ? formatBytes(server.traffic_limit * 1024 * 1024 * 1024) : '')"
               >{{ server.traffic_limit ? formatBytes(server.traffic_limit * 1024 * 1024 * 1024) : '-' }}</span>
             </td>
-            <td>
+            <td v-show="visibleColumns.includes('agent')">
               <span
                 class="spec-text"
                 :class="[getAgentVersionClass(server.agent_version), { 'spec-copied': isSpecCopied(server, 'agent_version') }]"
                 @click.stop="emitCopySpec(server, 'agent_version', server.agent_version)"
-              >{{ server.agent_version || '●' }}</span>
+              >{{ server.agent_version || '—' }}</span>
             </td>
             <td>
-              <span :style="{ color: server.is_online ? 'var(--accent-green)' : 'var(--accent-red)' }" class="font-bold">{{ (server.is_online ? '● ' + trans.online : '● ' + trans.offline).toUpperCase() }}</span>
+              <span class="admin-status-badge" :class="server.is_online ? 'online' : 'offline'"><span></span>{{ server.is_online ? trans.online : trans.offline }}</span>
             </td>
             <td>
               <div class="action-group">
                 <div class="action-btns">
-                  <button @click="$emit('copy-cmd', server.id)" class="btn btn-icon btn-green" :aria-label="trans.copy">{{ copiedServerId === server.id ? '✅' : '📋' }}</button>
-                  <button @click="$emit('edit', server)" class="btn btn-icon btn-blue" :aria-label="trans.edit">✏️</button>
-                  <button @click="$emit('delete', server.id)" class="btn btn-icon btn-red" :aria-label="trans.delete">🗑️</button>
+                  <button @click="$emit('copy-cmd', server.id)" class="btn btn-icon btn-green" :aria-label="trans.installCommand" :title="trans.installCommand"><AdminIcon :name="copiedServerId === server.id ? 'check' : 'copy'" /></button>
+                  <button @click="$emit('edit', server)" class="btn btn-icon btn-blue" :aria-label="trans.edit"><AdminIcon name="edit" :size="16" /></button>
+                  <button @click="$emit('delete', server.id)" class="btn btn-icon btn-red" :aria-label="trans.delete"><AdminIcon name="trash" :size="16" /></button>
                 </div>
               </div>
             </td>
@@ -172,11 +166,14 @@
 </template>
 
 <script setup>
-import { computed, onBeforeUnmount, ref, watch } from 'vue'
+import UiSelect from '../../../components/UiSelect.vue'
+import AdminIcon from './AdminIcon.vue'
+import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
 import { getFlagRegionCode, formatBytes } from '../../../utils/api'
 import { getPublicAssetUrl } from '../../../utils/config'
 import { currentLang } from '../../../utils/i18n'
 import { detectBillingCycle, detectCurrencySymbol, getBillingCycleOption, getLocalizedOptionField, isEnabledFlag, isFreePrice, normalizeCurrency, normalizePrice } from '../../../utils/server.js'
+import { filterServers } from '../serverFilters.js'
 import OsIcon from '../../../components/OsIcon.vue'
 import HelpTooltip from '../../../components/HelpTooltip.vue'
 
@@ -189,6 +186,7 @@ const props = defineProps({
   selectedApiIndex: { type: Number, default: 0 },
   latestAgentVersion: { type: String, default: '' },
   cacheRefreshing: { type: Boolean, default: false },
+  addingServer: Boolean,
   copiedServerId: { type: [String, Number], default: null },
   copiedNoteServerId: { type: [String, Number], default: null },
   copiedSpecKey: { type: String, default: null }
@@ -202,6 +200,41 @@ const emit = defineEmits([
   'drag-start', 'drop', 'toggle-server', 'copy-note',
   'copy-spec', 'copy-cmd', 'edit', 'delete'
 ])
+
+const adding = ref(false)
+const nameInput = ref(null)
+const toggleAdding = async () => { adding.value = !adding.value; if (adding.value) { await nextTick(); nameInput.value?.focus() } }
+watch(() => props.activeTab, (tab) => { if (tab !== 'servers') adding.value = false })
+const search = ref('')
+const statusFilter = ref('')
+const regionFilter = ref('')
+const groupFilter = ref('')
+const filteredServers = computed(() => filterServers(props.servers, { search: search.value, status: statusFilter.value, region: regionFilter.value, group: groupFilter.value, defaultGroup: props.trans.default }))
+const allVisibleSelected = computed(() => filteredServers.value.length > 0 && filteredServers.value.every(server => props.selectedServers.includes(server.id)))
+const someVisibleSelected = computed(() => filteredServers.value.some(server => props.selectedServers.includes(server.id)))
+const clearFilters = () => { search.value = ''; statusFilter.value = ''; regionFilter.value = ''; groupFilter.value = '' }
+const regionOptions = computed(() => {
+  let names
+  try { names = new Intl.DisplayNames([currentLang.value], { type: 'region' }) } catch (_) {}
+  return [...new Set(props.servers.map(server => String(server.region || 'xx').toUpperCase()))].sort().map(value => {
+    let label = value
+    try { label = value === 'XX' ? props.trans.adminUnknownRegion : names?.of(value) || value } catch (_) {}
+    return { value, label }
+  })
+})
+const visibleColumns = ref(['network', 'group', 'tags', 'billing', 'expiry', 'agent'])
+const optionalColumns = computed(() => [
+  { key: 'network', label: 'IP' }, { key: 'group', label: props.trans.group }, { key: 'tags', label: props.trans.tags },
+  { key: 'note', label: props.trans.note }, { key: 'billing', label: props.trans.price }, { key: 'expiry', label: props.trans.expirationDate },
+  { key: 'renewal', label: props.trans.autoRenewal }, { key: 'traffic', label: props.trans.traffic }, { key: 'agent', label: props.trans.agentVersion },
+])
+const toggleColumn = (key) => { visibleColumns.value = visibleColumns.value.includes(key) ? visibleColumns.value.filter(value => value !== key) : [...visibleColumns.value, key] }
+
+defineExpose({
+  closeAddForm: () => { adding.value = false },
+  openAddForm: async () => { adding.value = true; await nextTick(); nameInput.value?.focus() },
+  filterStatus: (status) => { clearFilters(); statusFilter.value = status },
+})
 
 const POINTER_DRAG_THRESHOLD = 6
 const CUSTOM_SERVER_GROUP_VALUE = '__custom__'
@@ -468,7 +501,7 @@ const normalizeVersion = (version) => String(version || '').trim()
 const getAgentVersionClass = (version) => {
   const latest = normalizeVersion(props.latestAgentVersion)
   if (!latest) return ''
-  return normalizeVersion(version) === latest ? 'text-green' : 'text-red'
+  return normalizeVersion(version) === latest ? 'text-green' : 'text-secondary'
 }
 const getServerQuery = () => props.selectedApiIndex ? `?apiIndex=${props.selectedApiIndex}` : ''
 // 详情页是公开页面，走域名根路径入口 /#/server/:id

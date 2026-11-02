@@ -3,7 +3,7 @@
     <div class="modal-dialog batch-edit-modal">
       <div class="modal-header">
         <div class="modal-title">{{ trans.batchEdit }} [{{ selectedCount }}]</div>
-        <button class="modal-close" @click="$emit('close')">×</button>
+        <button class="modal-close" @click="$emit('close')" :aria-label="trans.close"><AdminIcon name="x" :size="16" /></button>
       </div>
 
       <div class="batch-edit-grid">
@@ -23,26 +23,26 @@
         <div class="batch-edit-section">
           <div class="section-subtitle">{{ trans.billing || 'Billing' }}</div>
           <BatchEditField :enabled="enabled.currency" :label="trans.currency" @toggle="toggleField('currency', $event)">
-            <select v-model="form.currency" class="form-select" :disabled="!enabled.currency">
+            <UiSelect v-model="form.currency" class="form-select" :disabled="!enabled.currency">
               <option v-for="item in currencySelectOptions" :key="item.symbol" :value="item.symbol">{{ currencyLabel(item) }}</option>
-            </select>
+            </UiSelect>
           </BatchEditField>
           <BatchEditField :enabled="enabled.price" :label="trans.price" @toggle="toggleField('price', $event)">
             <input type="text" v-model="form.price" class="form-input" :disabled="!enabled.price" placeholder="40.00">
           </BatchEditField>
           <BatchEditField :enabled="enabled.billing_cycle" :label="trans.billingCycle" @toggle="toggleField('billing_cycle', $event)">
-            <select v-model="form.billing_cycle" class="form-select" :disabled="!enabled.billing_cycle">
+            <UiSelect v-model="form.billing_cycle" class="form-select" :disabled="!enabled.billing_cycle">
               <option v-for="item in billingCycleOptions" :key="item.value" :value="item.value">{{ cycleLabel(item) }}</option>
-            </select>
+            </UiSelect>
           </BatchEditField>
           <BatchEditField :enabled="enabled.expire_date" :label="trans.expirationDate" @toggle="toggleField('expire_date', $event)">
             <input type="date" v-model="form.expire_date" class="form-input" :disabled="!enabled.expire_date" @click="openDatePicker">
           </BatchEditField>
           <BatchEditField :enabled="enabled.auto_renewal" :label="trans.autoRenewal" @toggle="toggleField('auto_renewal', $event)">
-            <select v-model="form.auto_renewal" class="form-select" :disabled="!enabled.auto_renewal">
+            <UiSelect v-model="form.auto_renewal" class="form-select" :disabled="!enabled.auto_renewal">
               <option :value="true">{{ trans.enabled }}</option>
               <option :value="false">{{ trans.disabled }}</option>
-            </select>
+            </UiSelect>
           </BatchEditField>
         </div>
 
@@ -52,18 +52,18 @@
             <input type="number" v-model="form.traffic_limit" class="form-input" :disabled="!enabled.traffic_limit" min="0" step="1">
           </BatchEditField>
           <BatchEditField :enabled="enabled.traffic_calc_type" :label="trans.trafficCalcType" @toggle="toggleField('traffic_calc_type', $event)">
-            <select v-model="form.traffic_calc_type" class="form-select" :disabled="!enabled.traffic_calc_type">
+            <UiSelect v-model="form.traffic_calc_type" class="form-select" :disabled="!enabled.traffic_calc_type">
               <option value="total">{{ trans.trafficCalcTotal }}</option>
               <option value="ul">{{ trans.trafficCalcUl }}</option>
               <option value="dl">{{ trans.trafficCalcDl }}</option>
               <option value="max">{{ trans.trafficCalcMax }}</option>
-            </select>
+            </UiSelect>
           </BatchEditField>
           <BatchEditField :enabled="enabled.reset_day" :label="trans.trafficResetDay" @toggle="toggleField('reset_day', $event)">
-            <select v-model="form.reset_day" class="form-select" :disabled="!enabled.reset_day">
+            <UiSelect v-model="form.reset_day" class="form-select" :disabled="!enabled.reset_day">
               <option :value="0">0</option>
               <option v-for="day in 31" :key="day" :value="day">{{ day }}</option>
-            </select>
+            </UiSelect>
           </BatchEditField>
           <BatchEditField :enabled="enabled.traffic_alert_percent" :label="`${trans.trafficAlertPercent} (%)`" @toggle="toggleField('traffic_alert_percent', $event)">
             <input type="number" v-model="form.traffic_alert_percent" class="form-input" :disabled="!enabled.traffic_alert_percent" min="0" max="100" step="1">
@@ -79,38 +79,38 @@
         <div class="batch-edit-section">
           <div class="section-subtitle">{{ trans.editConf }}</div>
           <BatchEditField :enabled="enabled.collect_interval" :label="trans.collectInterval" @toggle="toggleField('collect_interval', $event)">
-            <select v-model="form.collect_interval" class="form-select" :disabled="!enabled.collect_interval">
+            <UiSelect v-model="form.collect_interval" class="form-select" :disabled="!enabled.collect_interval">
               <option :value="0">0</option>
               <option :value="1">1</option>
               <option :value="2">2</option>
               <option :value="5">5</option>
               <option :value="10">10</option>
-            </select>
+            </UiSelect>
           </BatchEditField>
           <BatchEditField :enabled="enabled.report_interval" :label="trans.reportInterval" @toggle="toggleField('report_interval', $event)">
-            <select v-model="form.report_interval" class="form-select" :disabled="!enabled.report_interval">
+            <UiSelect v-model="form.report_interval" class="form-select" :disabled="!enabled.report_interval">
               <option :value="30">30</option>
               <option :value="60">60</option>
               <option :value="120">120</option>
               <option :value="180">180</option>
-            </select>
+            </UiSelect>
           </BatchEditField>
           <BatchEditField :enabled="enabled.connection_mode" :label="trans.connectionMode" @toggle="toggleField('connection_mode', $event)">
-            <select v-model="form.connection_mode" class="form-select" :disabled="!enabled.connection_mode || !isWssReportEnabled">
+            <UiSelect v-model="form.connection_mode" class="form-select" :disabled="!enabled.connection_mode || !isWssReportEnabled">
               <option value="auto">{{ trans.connectionModeAuto }}</option>
               <option value="http">{{ trans.connectionModeHttp }}</option>
-            </select>
+            </UiSelect>
           </BatchEditField>
           <BatchEditField v-if="isWssReportEnabled && form.connection_mode === 'auto'" :enabled="enabled.wss_report_interval" :label="trans.wssReportInterval" @toggle="toggleField('wss_report_interval', $event)">
-            <select v-model="form.wss_report_interval" class="form-select" :disabled="!enabled.wss_report_interval">
+            <UiSelect v-model="form.wss_report_interval" class="form-select" :disabled="!enabled.wss_report_interval">
               <option v-for="second in 5" :key="second" :value="second">{{ second }}</option>
-            </select>
+            </UiSelect>
           </BatchEditField>
           <BatchEditField :enabled="enabled.ping_mode" :label="trans.pingMode" @toggle="toggleField('ping_mode', $event)">
-            <select v-model="form.ping_mode" class="form-select" :disabled="!enabled.ping_mode">
+            <UiSelect v-model="form.ping_mode" class="form-select" :disabled="!enabled.ping_mode">
               <option value="tcp">TCP</option>
               <option value="icmp">ICMP (root)</option>
-            </select>
+            </UiSelect>
           </BatchEditField>
           <BatchEditField :enabled="enabled.interface" :label="trans.networkInterface" @toggle="toggleField('interface', $event)">
             <input type="text" v-model.trim="form.interface" class="form-input" :disabled="!enabled.interface" placeholder="eth0">
@@ -139,22 +139,22 @@
         <div class="batch-edit-section">
           <div class="section-subtitle">{{ trans.displayOptions }}</div>
           <BatchEditField :enabled="enabled.auto_update" :label="trans.autoUpdate" @toggle="toggleField('auto_update', $event)">
-            <select v-model="form.auto_update" class="form-select" :disabled="!enabled.auto_update">
+            <UiSelect v-model="form.auto_update" class="form-select" :disabled="!enabled.auto_update">
               <option :value="true">{{ trans.enabled }}</option>
               <option :value="false">{{ trans.disabled }}</option>
-            </select>
+            </UiSelect>
           </BatchEditField>
           <BatchEditField :enabled="enabled.is_hidden" :label="trans.hideFromPublic" @toggle="toggleField('is_hidden', $event)">
-            <select v-model="form.is_hidden" class="form-select" :disabled="!enabled.is_hidden">
+            <UiSelect v-model="form.is_hidden" class="form-select" :disabled="!enabled.is_hidden">
               <option :value="true">{{ trans.enabled }}</option>
               <option :value="false">{{ trans.disabled }}</option>
-            </select>
+            </UiSelect>
           </BatchEditField>
           <BatchEditField :enabled="enabled.offline_notify_disabled" :label="trans.disableOfflineNotify" @toggle="toggleField('offline_notify_disabled', $event)">
-            <select v-model="form.offline_notify_disabled" class="form-select" :disabled="!enabled.offline_notify_disabled">
+            <UiSelect v-model="form.offline_notify_disabled" class="form-select" :disabled="!enabled.offline_notify_disabled">
               <option :value="true">{{ trans.enabled }}</option>
               <option :value="false">{{ trans.disabled }}</option>
-            </select>
+            </UiSelect>
           </BatchEditField>
         </div>
       </div>
@@ -168,6 +168,8 @@
 </template>
 
 <script setup>
+import UiSelect from '../../../components/UiSelect.vue'
+import AdminIcon from './AdminIcon.vue'
 import { computed } from 'vue'
 import BatchEditField from './BatchEditField.vue'
 import { currentLang } from '../../../utils/i18n.js'

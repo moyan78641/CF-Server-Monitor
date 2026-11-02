@@ -1,31 +1,31 @@
 <template>
   <div id="tab-database" class="tab-content" :class="{ active: activeTab === 'database' }">
     <div class="settings-section">
-      <div class="section-title"><span>▸</span> {{ trans.dbManagement }}</div>
+      <div class="section-title">{{ trans.dbManagement }}</div>
 
       <div class="settings-grid">
         <div class="form-group">
-          <button @click="$emit('open-db-modal', 'upgrade')" class="btn btn-primary btn-lg" :disabled="dbLoading">⬆️ {{ trans.upgradeDatabase }}</button>
+          <button @click="$emit('open-db-modal', 'upgrade')" class="btn btn-primary btn-lg" :disabled="dbLoading"><AdminIcon name="upload" :size="16" /> {{ trans.upgradeDatabase }}</button>
           <p class="text-muted text-sm mt-2">{{ trans.upgradeDesc }}</p>
         </div>
 
         <div class="form-group">
-          <button @click="$emit('open-db-modal', 'clearHistory')" class="btn btn-red btn-lg" :disabled="dbLoading">🗑️ {{ trans.clearHistory }}</button>
+          <button @click="$emit('open-db-modal', 'clearHistory')" class="btn btn-red btn-lg" :disabled="dbLoading"><AdminIcon name="trash" :size="16" /> {{ trans.clearHistory }}</button>
           <p class="text-muted text-sm mt-2">{{ trans.clearHistoryDesc }}</p>
         </div>
       </div>
     </div>
 
     <div class="settings-section">
-      <div class="section-title"><span>▸</span> {{ trans.exportServers }} / {{ trans.importServers }}</div>
+      <div class="section-title">{{ trans.exportServers }} / {{ trans.importServers }}</div>
 
       <div class="settings-grid">
         <div class="form-group">
           <button @click="handleExport" class="btn btn-primary btn-lg" :disabled="dbLoading || exporting">
-            {{ exporting ? trans.exporting : '📤 ' + trans.exportServers }}
+            <AdminIcon :name="exporting ? 'loader' : 'export'" :class="{ 'is-spinning': exporting }" /> {{ exporting ? trans.exporting : trans.exportServers }}
           </button>
           <p v-if="exportNotice" class="text-sm mt-2" :style="{ color: exportNotice.success ? 'var(--accent-green)' : 'var(--accent-red)' }">
-            {{ exportNotice.success ? '✅' : '❌' }} {{ exportNotice.text }}
+            <AdminIcon :name="exportNotice.success ? 'check' : 'error'" /> {{ exportNotice.text }}
           </p>
         </div>
 
@@ -38,7 +38,7 @@
             @change="handleFileSelect"
           />
           <button @click="$refs.fileInput.click()" class="btn btn-lg" :disabled="dbLoading || importing">
-            {{ importing ? trans.importing : '📥 ' + trans.importServers }}
+            <AdminIcon :name="importing ? 'loader' : 'upload'" :class="{ 'is-spinning': importing }" /> {{ importing ? trans.importing : trans.importServers }}
           </button>
         </div>
       </div>
@@ -49,7 +49,7 @@
         <div :class="importResult.success ? 'warning-box' : 'danger-box'" class="mb-2">
           <div class="flex-center-gap-sm">
             <span :style="{ color: importResult.success ? 'var(--accent-green)' : 'var(--accent-red)', fontWeight: '600' }">
-              {{ importResult.success ? '✅' : '❌' }} {{ trans.importResult }}
+              <AdminIcon :name="importResult.success ? 'check' : 'error'" /> {{ trans.importResult }}
             </span>
           </div>
           <div class="mt-2 text-sm">
@@ -66,6 +66,7 @@
 </template>
 
 <script setup>
+import AdminIcon from './AdminIcon.vue'
 import { ref } from 'vue'
 import { adminApi } from '../../../utils/api'
 import { parseServerBackup } from '../../../utils/backup'

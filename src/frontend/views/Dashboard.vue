@@ -1,5 +1,5 @@
 <template>
-  <div class="container" :class="{ 'mikus-dashboard': isMikusTheme }">
+  <div class="container public-app public-dashboard" :class="{ 'mikus-dashboard': isMikusTheme }">
     <TerminalHeader :title="sysConfig.site_title || DEFAULT_SITE_TITLE" />
     
     <div v-if="isLoading" class="loading-state" :class="{ 'mikus-loading-state': isMikusTheme }">
@@ -13,108 +13,17 @@
           <div class="mikus-loading-progress" aria-hidden="true">
             <div class="mikus-loading-progress-fill"></div>
           </div>
-          <div class="mikus-loading-status">$ {{ trans.loading }}</div>
+          <div class="mikus-loading-status">{{ trans.loading }}</div>
         </div>
       </template>
       <template v-else>
         <div class="loading-spinner"></div>
-        <div class="loading-text">$ {{ trans.loading }}</div>
+        <div class="loading-text">{{ trans.loading }}</div>
       </template>
     </div>
 
     <template v-else>
-    <div class="nav-area">
-      <div class="header-row">
-        <div class="site-title">$ {{ sysConfig.site_title || DEFAULT_SITE_TITLE }}</div>
-        <div class="controls-group">
-          <div class="view-toggle">
-            <button
-              class="toggle-btn"
-              :class="{ active: currentView === 'bar' }"
-              @click="switchView('bar')"
-            >▤ {{ trans.barChart }}</button>
-            <button
-              class="toggle-btn"
-              :class="{ active: currentView === 'ring' }"
-              @click="switchView('ring')"
-            >◌ {{ trans.ringChart }}</button>
-            <button
-              class="toggle-btn"
-              :class="{ active: currentView === 'table' }"
-              @click="switchView('table')"
-            >≡ {{ trans.table }}</button>
-            <button
-              class="toggle-btn"
-              :class="{ active: currentView === 'map' }"
-              @click="switchView('map')"
-            >◉ {{ trans.map }}</button>
-          </div>
-        </div>
-      </div>
-      <div class="filter-wrap" ref="filterWrap">
-        <div class="filter-bar" id="ajax-filters">
-          <button
-            v-for="item in visibleFilterOptions"
-            :key="item.code"
-            type="button"
-            class="filter-tag"
-            :class="{ active: currentFilter === item.code, 'filter-tag-unknown': item.code === 'unknown' }"
-            :data-filter="item.code"
-            @click="setFilter(item.code)"
-          >
-            <span v-if="item.code === 'unknown'" class="filter-tag-icon">🏳️</span>
-            <img v-else-if="item.flagCode" :src="getPublicAssetUrl('flags/' + item.flagCode + '.svg')" :alt="item.code">
-            <span class="filter-tag-label">{{ item.label }}</span>
-            <span class="filter-tag-count">{{ item.count }}</span>
-          </button>
-          <div v-if="overflowFilterOptions.length > 0" class="filter-more" :class="{ active: isOverflowFilterActive }">
-            <button
-              type="button"
-              class="filter-tag filter-more-btn"
-              :class="{ active: isOverflowFilterActive }"
-              @click.stop="toggleFilterMore"
-            >
-              <span class="filter-tag-label">{{ filterMoreLabel }}</span>
-              <span class="filter-tag-count">{{ overflowFilterOptions.length }}</span>
-            </button>
-            <div v-if="filterMoreOpen" class="filter-more-menu">
-              <button
-                v-for="item in overflowFilterOptions"
-                :key="item.code"
-                type="button"
-                class="filter-tag filter-more-item"
-                :class="{ active: currentFilter === item.code, 'filter-tag-unknown': item.code === 'unknown' }"
-                :data-filter="item.code"
-                @click="setFilter(item.code)"
-              >
-                <span v-if="item.code === 'unknown'" class="filter-tag-icon">🏳️</span>
-                <img v-else-if="item.flagCode" :src="getPublicAssetUrl('flags/' + item.flagCode + '.svg')" :alt="item.code">
-                <span class="filter-tag-label">{{ item.label }}</span>
-                <span class="filter-tag-count">{{ item.count }}</span>
-              </button>
-            </div>
-          </div>
-        </div>
-        <div ref="filterMeasure" class="filter-measure" aria-hidden="true">
-          <button
-            v-for="item in filterOptionEntries"
-            :key="item.code"
-            type="button"
-            class="filter-tag filter-measure-tag"
-          >
-            <span v-if="item.code === 'unknown'" class="filter-tag-icon">🏳️</span>
-            <img v-else-if="item.flagCode" :src="getPublicAssetUrl('flags/' + item.flagCode + '.svg')" :alt="item.code">
-            <span class="filter-tag-label">{{ item.label }}</span>
-            <span class="filter-tag-count">{{ item.count }}</span>
-          </button>
-          <button ref="filterMoreMeasure" type="button" class="filter-tag filter-more-btn">
-            <span class="filter-tag-label">{{ filterMoreLabel }}</span>
-            <span class="filter-tag-count">{{ filterOptionEntries.length }}</span>
-          </button>
-        </div>
-      </div>
-    </div>
-
+    <div class="public-page-heading"><h1>{{ trans.servers }}<span class="public-count">{{ servers.length }}</span></h1><div class="view-toggle" role="group" :aria-label="trans.displayMode"><button v-for="view in viewOptions" :key="view.value" class="toggle-btn" :class="{ active: currentView === view.value }" :aria-pressed="currentView === view.value" :title="view.label" @click="switchView(view.value)"><AppIcon :name="view.icon" :size="17" /><span>{{ view.label }}</span></button></div></div>
     <div class="global-stats" :class="{ 'mikus-global-stats': isMikusTheme }">
       <div v-if="isMikusTheme" class="mikus-stats-mascot" aria-hidden="true">
         <img class="mikus-stats-mascot-img" :src="mikusAsset('QWQ.webp')" alt="">
@@ -150,26 +59,31 @@
       </div>
     </div>
 
-    <div id="view-card" class="view-panel" :class="{ active: isCardView, 'high-density': filteredServers.length > 12 }">
-      <div v-if="groupedServers.length === 0" class="empty-state">
-        [!] {{ trans.noServer }} <a href="/admin#/admin" class="admin-link-color">{{ trans.backToAdmin }}</a>{{ trans.noServerSuffix }}
-      </div>
-      <div v-else>
-        <div v-for="group in groupedServers" :key="group.name" class="group-section">
-          <div class="group-header" :data-group="group.name">
-            <span class="prompt-sign">#</span> {{ group.name }} <span class="group-count">[{{ group.servers.length }}]</span>
-          </div>
-          <div class="servers-grid">
-            <component
-              :is="currentCardComponent"
-              v-for="server in group.servers"
-              :key="server.id + '-' + currentView"
-              :server="server"
-              :sys-config="sysConfig"
-              :to="getServerLink(server)"
-            />
-          </div>
+    <section class="public-filters" :aria-label="trans.adminSearch">
+      <div class="public-filter-toolbar">
+        <div class="public-status-filters" role="group" :aria-label="trans.status"><button v-for="status in statusOptions" :key="status.value" :class="{ active: statusFilter === status.value }" :aria-pressed="statusFilter === status.value" @click="statusFilter = status.value">{{ status.label }}<span>{{ status.count }}</span></button></div>
+        <div class="public-filter-actions">
+          <UiSelect v-if="groupOptions.length > 1" v-model="groupFilter" class="public-group-filter" :aria-label="trans.group"><option :value="null">{{ trans.adminAllGroups }}</option><option v-for="group in groupOptions" :key="group.value" :value="group.value">{{ group.label }} ({{ group.count }})</option></UiSelect>
+          <div class="public-search"><AppIcon name="search" :size="17" /><input ref="searchInput" v-model="searchQuery" type="search" :placeholder="trans.publicSearch" :aria-label="trans.publicSearch" /><kbd v-if="!searchQuery">/</kbd></div>
         </div>
+      </div>
+      <div class="public-region-filters"><button type="button" class="filter-tag" :class="{ active: currentFilter === 'all' }" :aria-pressed="currentFilter === 'all'" @click="currentFilter = 'all'"><AppIcon name="globe" :size="15" />{{ trans.all }}<span class="filter-tag-count">{{ servers.length }}</span></button><button v-for="item in filterOptionEntries" :key="item.code" type="button" class="filter-tag" :class="{ active: currentFilter === item.code }" :aria-pressed="currentFilter === item.code" @click="setFilter(item.code)"><img v-if="item.flagCode" :src="getPublicAssetUrl('flags/' + item.flagCode + '.svg')" alt="" /><AppIcon v-else name="globe" :size="15" /><span>{{ item.label }}</span><span class="filter-tag-count">{{ item.count }}</span></button></div>
+      <div v-if="searchQuery || statusFilter !== 'all' || currentFilter !== 'all' || groupFilter !== null" class="public-filter-results"><span>{{ filteredServers.length }} / {{ servers.length }}</span><button class="public-text-button" @click="clearFilters"><AppIcon name="x" :size="14" />{{ trans.adminClearFilters }}</button></div>
+    </section>
+
+    <div id="view-card" class="view-panel" :class="{ active: isCardView, 'high-density': pagedServers.length > 12 }">
+      <div v-if="filteredServers.length === 0" class="empty-state">
+        <AppIcon name="server" :size="30" /><strong>{{ servers.length ? trans.adminNoResults : trans.noServer }}</strong> <button v-if="servers.length" class="public-text-button" @click="clearFilters">{{ trans.adminClearFilters }}</button><a v-else href="/admin#/admin" class="admin-link-color">{{ trans.backToAdmin }}</a>
+      </div>
+      <div v-else class="servers-grid">
+        <component
+          :is="currentCardComponent"
+          v-for="server in pagedServers"
+          :key="server.id + '-' + currentView"
+          :server="server"
+          :sys-config="sysConfig"
+          :to="getServerLink(server)"
+        />
       </div>
     </div>
 
@@ -196,14 +110,14 @@
             <tr v-if="isLoading">
               <td class="table-empty-state" colspan="12">
                 <div class="loading-spinner-small"></div>
-                <span>$ {{ trans.loading }}</span>
+                <span>{{ trans.loading }}</span>
               </td>
             </tr>
             <tr v-else-if="filteredServers.length === 0">
-              <td class="table-empty-state" colspan="12">[*] {{ trans.noData }}</td>
+              <td class="table-empty-state" colspan="12">{{ trans.noData }}</td>
             </tr>
             <tr 
-              v-for="server in filteredServers" 
+              v-for="server in pagedServers"
               :key="server.id"
               @click="goToServer(server)"
               class="table-cursor-pointer"
@@ -212,13 +126,13 @@
               <td class="table-center-cell">
                 <div class="status-indicator table-status-indicator-inline" :style="{ background: getStatusColor(server) }"></div>
               </td>
-              <td><b class="table-server-name">{{ server.name }}</b></td>
+              <td><router-link class="table-server-name" :to="getServerLink(server)" @click.stop>{{ server.name }}</router-link></td>
               <td>
                 <span v-if="server.region && server.region !== 'xx'" class="country-os-icons">
                   <img :src="getPublicAssetUrl('flags/' + getFlagRegionCode(server.region) + '.svg')" :alt="server.region" class="flag-img">
                 </span>
                 <span v-else class="country-os-icons">
-                  <span class="flag-fallback">🏳️</span>
+                  <span class="flag-fallback"><AppIcon name="globe" :size="17" /></span>
                 </span>
                 {{ (server.region || 'XX').toUpperCase() }}
               </td>
@@ -231,7 +145,7 @@
               <td>
                 <div class="table-stat">
                   <div class="stat-bar-container stat-bar-small table-usage-bar">
-                  <div class="stat-bar-fill" :style="{ width: (parseFloat(server.cpu) || 0) + '%', background: getUsageColor(parseFloat(server.cpu) || 0) }"></div>
+                  <div class="stat-bar-fill" :style="{ transform: `scaleX(${Math.min(1, Math.max(0, (parseFloat(server.cpu) || 0) / 100))})`, background: getUsageColor(parseFloat(server.cpu) || 0) }"></div>
                 </div>
                   <span>{{ (parseFloat(server.cpu) || 0).toFixed(1) }}%</span>
                 </div>
@@ -239,7 +153,7 @@
               <td>
                 <div class="table-stat">
                   <div class="stat-bar-container table-usage-bar">
-                    <div class="stat-bar-fill" :style="{ width: (server.ram_total > 0 ? ((server.ram_used / server.ram_total) * 100).toFixed(2) : 0) + '%', background: getUsageColor(server.ram_total > 0 ? ((server.ram_used / server.ram_total) * 100) : 0) }"></div>
+                    <div class="stat-bar-fill" :style="{ transform: `scaleX(${server.ram_total > 0 ? Math.min(1, Math.max(0, server.ram_used / server.ram_total)) : 0})`, background: getUsageColor(server.ram_total > 0 ? ((server.ram_used / server.ram_total) * 100) : 0) }"></div>
                   </div>
                   <span>{{ server.ram_total > 0 ? ((server.ram_used / server.ram_total) * 100).toFixed(2) : '0.00' }}%</span>
                 </div>
@@ -247,7 +161,7 @@
               <td>
                 <div class="table-stat">
                   <div class="stat-bar-container table-usage-bar">
-                    <div class="stat-bar-fill" :style="{ width: (server.disk_total > 0 ? ((server.disk_used / server.disk_total) * 100).toFixed(2) : 0) + '%', background: getUsageColor(server.disk_total > 0 ? ((server.disk_used / server.disk_total) * 100) : 0) }"></div>
+                    <div class="stat-bar-fill" :style="{ transform: `scaleX(${server.disk_total > 0 ? Math.min(1, Math.max(0, server.disk_used / server.disk_total)) : 0})`, background: getUsageColor(server.disk_total > 0 ? ((server.disk_used / server.disk_total) * 100) : 0) }"></div>
                   </div>
                   <span>{{ server.disk_total > 0 ? ((server.disk_used / server.disk_total) * 100).toFixed(2) : '0.00' }}%</span>
                 </div>
@@ -255,7 +169,7 @@
               <td v-if="sysConfig.show_tf && server.traffic_limit">
                 <div class="table-stat">
                     <div class="stat-bar-container stat-bar-small table-usage-bar">
-                    <div class="stat-bar-fill" :style="{ width: Math.min(100, calcTrafficUsagePercent(server)) + '%', background: getUsageColor(calcTrafficUsagePercent(server)) }"></div>
+                    <div class="stat-bar-fill" :style="{ transform: `scaleX(${Math.min(1, Math.max(0, calcTrafficUsagePercent(server) / 100))})`, background: getUsageColor(calcTrafficUsagePercent(server)) }"></div>
                   </div>
                   <span>{{ calcTrafficUsagePercent(server).toFixed(1) }}%</span>
                 </div>
@@ -273,6 +187,12 @@
       </div>
     </div>
 
+    <nav v-if="currentView !== 'map' && filteredServers.length > 12" class="public-pagination" :aria-label="trans.servers">
+      <span class="public-page-range">{{ (currentPage - 1) * pageSize + 1 }}–{{ Math.min(currentPage * pageSize, filteredServers.length) }} / {{ filteredServers.length }}</span>
+      <div class="public-page-buttons"><button type="button" :disabled="currentPage === 1" :aria-label="trans.publicPrevious" @click="changePage(currentPage - 1)"><AppIcon name="chevron-left" :size="16" /></button><span>{{ currentPage }} / {{ pageCount }}</span><button type="button" :disabled="currentPage === pageCount" :aria-label="trans.publicNext" @click="changePage(currentPage + 1)"><AppIcon name="chevron-right" :size="16" /></button></div>
+      <UiSelect v-model="pageSize" class="public-page-size" :aria-label="trans.publicPerPage"><option v-for="size in [12, 24, 48]" :key="size" :value="size">{{ size }} {{ trans.publicPerPage }}</option></UiSelect>
+    </nav>
+
     <div id="view-map" class="view-panel" :class="{ active: currentView === 'map' }">
       <div class="map-wrapper">
         <div ref="mapContainer" id="map-container"></div>
@@ -288,12 +208,12 @@
     <div v-if="hasCorsError" class="modal-overlay active">
       <div class="modal-dialog">
         <div class="modal-header">
-          <div class="modal-title">$ cors --error</div>
-          <button class="modal-close" @click="hasCorsError = null">✕</button>
+          <div class="modal-title">{{ trans.corsBlocked }}</div>
+          <button class="modal-close" @click="hasCorsError = null" :aria-label="trans.close"><AppIcon name="x" :size="17" /></button>
         </div>
         <div v-for="site in hasCorsError" :key="site" class="danger-box mb-4">
           <div class="flex-center-gap-sm">
-            <span class="danger-label">❌ {{ site }} {{ trans.corsBlocked }}</span>
+            <span class="danger-label"><AppIcon name="alert" :size="17" />{{ site }} {{ trans.corsBlocked }}</span>
           </div>
         </div>
         <div class="modal-footer flex-justify-end">
@@ -305,8 +225,8 @@
     <div v-if="financeModalOpen" class="modal-overlay active" @click.self="financeModalOpen = false">
       <div class="modal-dialog finance-modal-dialog">
         <div class="modal-header">
-          <div class="modal-title">$ finance --summary</div>
-          <button class="modal-close" @click="financeModalOpen = false">✕</button>
+          <div class="modal-title">{{ trans.remainingValue }}</div>
+          <button class="modal-close" @click="financeModalOpen = false" :aria-label="trans.close"><AppIcon name="x" :size="17" /></button>
         </div>
 
         <div class="finance-summary-grid">
@@ -325,11 +245,11 @@
           </div>
           <label class="finance-currency-picker">
             <span>{{ trans.exchangeRateBase }}</span>
-            <select :value="financeCurrency" class="form-select" @change="setFinanceCurrency">
+            <UiSelect :value="financeCurrency" class="form-select" @change="setFinanceCurrency">
               <option v-for="currency in financeRateCurrencies" :key="currency" :value="currency">
                 {{ currency }}
               </option>
-            </select>
+            </UiSelect>
           </label>
         </div>
 
@@ -364,6 +284,10 @@
 </template>
 
 <script setup>
+import UiSelect from '../components/UiSelect.vue'
+import AppIcon from '../components/AppIcon.vue'
+import { useDialogs } from '../composables/useDialogs'
+useDialogs('.public-app')
 import { ref, computed, inject, nextTick, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import TerminalHeader from '../components/TerminalHeader.vue'
@@ -413,7 +337,7 @@ const sysConfig = ref({
   node_4_name: appConfig?.node_4_name || 'Node 4',
   frontend_ws_timeout_minutes: normalizeLiveSocketTimeoutMinutes(appConfig?.frontend_ws_timeout_minutes),
   display_mode: 'bar',
-  site_title: DEFAULT_SITE_TITLE,
+  site_title: appConfig?.site_title || DEFAULT_SITE_TITLE,
   theme_options: normalizeThemeOptions(appConfig?.theme_options),
   latency_window: appConfig?.latency_window || {
     points: LATENCY_WINDOW.POINTS,
@@ -423,11 +347,6 @@ const sysConfig = ref({
 const regionStats = ref({})
 const currentView = ref('bar')
 const currentFilter = ref('all')
-const filterWrap = ref(null)
-const filterMeasure = ref(null)
-const filterMoreMeasure = ref(null)
-const filterVisibleCount = ref(Number.POSITIVE_INFINITY)
-const filterMoreOpen = ref(false)
 const mapInitialized = ref(false)
 const liveConnected = ref(false)
 const isLoading = ref(true)
@@ -535,8 +454,8 @@ const filterOptions = computed(() => {
 })
 
 const getFilterLabel = (code) => {
-  if (code === 'unknown') return '?'
-  return code.toUpperCase()
+  if (code === 'unknown') return trans.value.adminUnknownRegion
+  try { return new Intl.DisplayNames([currentLang.value], { type: 'region' }).of(code.toUpperCase()) || code.toUpperCase() } catch (_) { return code.toUpperCase() }
 }
 
 const filterOptionEntries = computed(() => Object.entries(filterOptions.value).map(([code, count]) => ({
@@ -546,115 +465,64 @@ const filterOptionEntries = computed(() => Object.entries(filterOptions.value).m
   flagCode: code !== 'all' && code !== 'unknown' ? getFlagRegionCode(code) : ''
 })))
 
-const filterMoreLabel = computed(() => trans.value.filterMore)
-const visibleFilterOptions = computed(() => filterOptionEntries.value.slice(0, filterVisibleCount.value))
-const overflowFilterOptions = computed(() => filterOptionEntries.value.slice(filterVisibleCount.value))
-const isOverflowFilterActive = computed(() => overflowFilterOptions.value.some(item => item.code === currentFilter.value))
-
-let filterResizeObserver = null
-let filterMeasureTimer = null
-
-const getFilterMaxRows = () => window.matchMedia('(max-width: 768px)').matches ? 2 : 1
-
-const getWrappedRowCount = (widths, wrapWidth, gap) => {
-  if (widths.length === 0) return 0
-
-  let rows = 1
-  let rowWidth = 0
-
-  for (const width of widths) {
-    const nextWidth = rowWidth > 0 ? rowWidth + gap + width : width
-    if (nextWidth <= wrapWidth || rowWidth === 0) {
-      rowWidth = nextWidth
-    } else {
-      rows += 1
-      rowWidth = width
-    }
+const searchQuery = ref('')
+const searchInput = ref(null)
+const statusFilter = ref('all')
+const groupFilter = ref(null)
+const currentPage = ref(1)
+const pageSize = ref(12)
+const groupOptions = computed(() => {
+  const groups = new Map()
+  for (const server of servers.value) {
+    const value = server.server_group || ''
+    groups.set(value, (groups.get(value) || 0) + 1)
   }
-
-  return rows
-}
-
-const updateFilterVisibleCount = () => {
-  const entries = filterOptionEntries.value
-  const wrapEl = filterWrap.value
-  const measureEl = filterMeasure.value
-  if (!wrapEl || !measureEl || entries.length === 0) {
-    filterVisibleCount.value = entries.length
-    return
-  }
-
-  const wrapWidth = wrapEl.clientWidth
-  const itemEls = Array.from(measureEl.querySelectorAll('.filter-measure-tag'))
-  if (wrapWidth <= 0 || itemEls.length === 0) return
-
-  const gap = Number.parseFloat(window.getComputedStyle(measureEl).columnGap) || 0
-  const itemWidths = itemEls.map(el => el.offsetWidth)
-  const maxRows = getFilterMaxRows()
-
-  if (getWrappedRowCount(itemWidths, wrapWidth, gap) <= maxRows) {
-    filterVisibleCount.value = entries.length
-    filterMoreOpen.value = false
-    return
-  }
-
-  const moreWidth = filterMoreMeasure.value?.offsetWidth || 70
-  let visibleCount = 0
-
-  for (let index = 0; index < itemWidths.length; index += 1) {
-    const nextVisibleCount = index + 1
-    const testWidths = [...itemWidths.slice(0, nextVisibleCount), moreWidth]
-    if (getWrappedRowCount(testWidths, wrapWidth, gap) > maxRows) break
-    visibleCount = nextVisibleCount
-  }
-
-  filterVisibleCount.value = Math.max(1, Math.min(visibleCount, entries.length - 1))
-}
-
-const scheduleFilterMeasurement = () => {
-  if (filterMeasureTimer) clearTimeout(filterMeasureTimer)
-  filterMeasureTimer = setTimeout(async () => {
-    filterMeasureTimer = null
-    await nextTick()
-    updateFilterVisibleCount()
-  }, 0)
-}
-
-const toggleFilterMore = () => {
-  filterMoreOpen.value = !filterMoreOpen.value
-}
-
-const closeFilterMoreOnOutsideClick = (event) => {
-  if (!filterWrap.value?.contains(event.target)) filterMoreOpen.value = false
-}
-
-watch(
-  () => filterOptionEntries.value.map(item => `${item.code}:${item.count}:${item.label}`).join('|'),
-  scheduleFilterMeasurement,
-  { flush: 'post' }
-)
-
-watch(filterMoreLabel, scheduleFilterMeasurement, { flush: 'post' })
-
+  return [...groups].map(([value, count]) => ({ value, label: value || trans.value.default, count }))
+})
+const viewOptions = computed(() => [
+  { value: 'bar', icon: 'list', label: trans.value.barChart },
+  { value: 'ring', icon: 'gauge', label: trans.value.ringChart },
+  { value: 'table', icon: 'layers', label: trans.value.table },
+  { value: 'map', icon: 'map', label: trans.value.map },
+])
+const statusOptions = computed(() => [
+  { value: 'all', label: trans.value.all, count: servers.value.length },
+  { value: 'online', label: trans.value.online, count: stats.value.online },
+  { value: 'offline', label: trans.value.offline, count: stats.value.offline },
+])
 const filteredServers = computed(() => {
-  if (currentFilter.value === 'all') return servers.value
-  if (currentFilter.value === 'unknown') return servers.value.filter(s => !s.region)
-  return servers.value.filter(s => (s.region || 'xx').toLowerCase() === currentFilter.value)
-})
-
-const groupedServers = computed(() => {
-  const groups = {}
-  const order = []
-  filteredServers.value.forEach(server => {
-    const groupName = server.server_group || 'Default'
-    if (!groups[groupName]) {
-      groups[groupName] = []
-      order.push(groupName)
-    }
-    groups[groupName].push(server)
+  const query = searchQuery.value.trim().toLocaleLowerCase()
+  return servers.value.filter(server => {
+    if (groupFilter.value !== null && (server.server_group || '') !== groupFilter.value) return false
+    const region = String(server.region || 'xx').toLowerCase()
+    if (currentFilter.value === 'unknown' && region !== 'xx') return false
+    if (!['all', 'unknown'].includes(currentFilter.value) && region !== currentFilter.value) return false
+    if (statusFilter.value !== 'all' && isServerOnline(server, now.value) !== (statusFilter.value === 'online')) return false
+    return !query || [server.name, server.server_group, server.tags, server.region, server.os].some(value => String(value || '').toLocaleLowerCase().includes(query))
   })
-  return order.map(name => ({ name, servers: groups[name] }))
 })
+const filteredRegionStats = computed(() => {
+  const regions = {}
+  for (const server of filteredServers.value) {
+    const code = String(server.region || 'xx').toUpperCase()
+    regions[code] = (regions[code] || 0) + 1
+  }
+  return regions
+})
+watch(filteredRegionStats, () => { if (mapInitialized.value) drawMarkers() })
+const pageCount = computed(() => Math.max(1, Math.ceil(filteredServers.value.length / pageSize.value)))
+const pagedServers = computed(() => filteredServers.value.slice((currentPage.value - 1) * pageSize.value, currentPage.value * pageSize.value))
+watch([searchQuery, statusFilter, currentFilter, groupFilter, pageSize], () => { currentPage.value = 1 })
+watch(pageCount, count => { currentPage.value = Math.min(currentPage.value, count) })
+const changePage = page => {
+  currentPage.value = page
+  document.querySelector('.public-filters')?.scrollIntoView({ block: 'start' })
+}
+const clearFilters = () => { searchQuery.value = ''; statusFilter.value = 'all'; currentFilter.value = 'all'; groupFilter.value = null }
+const onSearchKey = event => {
+  if (event.ctrlKey || event.metaKey || event.altKey || event.target.closest('input, textarea, [contenteditable=true], [role=combobox], [role=listbox]')) return
+  if (event.key === '/') { event.preventDefault(); searchInput.value?.focus() }
+}
 
 const isCardView = computed(() => currentView.value === 'bar' || currentView.value === 'ring')
 const currentCardComponent = computed(() => currentView.value === 'ring' ? ServerRingCard : ServerBarCard)
@@ -674,7 +542,6 @@ const switchView = (viewName) => {
 const setFilter = (code) => {
   const nextFilter = code.toLowerCase()
   currentFilter.value = currentFilter.value === nextFilter ? 'all' : nextFilter
-  filterMoreOpen.value = false
 }
 
 const getStatusColor = (server) => {
@@ -1236,21 +1103,23 @@ const regionCoords = {
 let markersLayer, geoJsonLayer, currentMapDataStr = ""
 
 const getThemeColors = () => {
-  const isLight = document.body.classList.contains('light')
+  const style = getComputedStyle(document.body)
+  const color = name => style.getPropertyValue(name).trim()
   return {
-    bgPrimary: isLight ? '#0a0e14' : '#0a0e14',
-    bgSecondary: isLight ? '#e8e8e0' : '#12171f',
-    borderColor: isLight ? '#1e2a3a' : '#1e2a3a',
-    accentGreen: isLight ? '#00d4aa' : '#00d4aa',
-    colorBlack: isLight ? '#000' : '#000',
-    colorWhite: isLight ? '#fff' : '#fff'
+    bgPrimary: color('--bg-primary'),
+    bgSecondary: color('--bg-secondary'),
+    borderColor: color('--border-color'),
+    accentGreen: color('--accent-green'),
+    colorBlack: color('--bg-card-solid'),
+    colorWhite: color('--text-primary')
   }
 }
 
 const drawMarkers = () => {
   if (!window.myMap || !window.worldGeoJson) return
 
-  const newDataStr = JSON.stringify(regionStats.value)
+  const colors = getThemeColors()
+  const newDataStr = JSON.stringify([filteredRegionStats.value, colors])
   if (currentMapDataStr === newDataStr) return
   currentMapDataStr = newDataStr
 
@@ -1258,9 +1127,8 @@ const drawMarkers = () => {
   if (markersLayer) markersLayer.clearLayers()
   else markersLayer = window.L.layerGroup().addTo(window.myMap)
 
-  const colors = getThemeColors()
   const activeIso2 = {}
-  for (const code in regionStats.value) {
+  for (const code in filteredRegionStats.value) {
     const upperCode = code.toUpperCase()
     activeIso2[upperCode] = true
     if (upperCode === 'HK' || upperCode === 'TW' || upperCode === 'MO') {
@@ -1276,12 +1144,12 @@ const drawMarkers = () => {
         weight: 1,
         opacity: 0.8,
         color: colors.bgPrimary,
-        fillOpacity: isActive ? 0.4 : 0.2
+        fillOpacity: isActive ? 0.4 : 0.8
       }
     }
   }).addTo(window.myMap)
 
-  for (const [code, count] of Object.entries(regionStats.value)) {
+  for (const [code, count] of Object.entries(filteredRegionStats.value)) {
     const upperCode = code.toUpperCase()
     if (regionCoords[upperCode]) {
       const icon = window.L.divIcon({
@@ -1321,14 +1189,7 @@ onMounted(async () => {
   }
   await refreshData()
   await nextTick()
-  scheduleFilterMeasurement()
-  if (window.ResizeObserver && filterWrap.value) {
-    filterResizeObserver = new ResizeObserver(scheduleFilterMeasurement)
-    filterResizeObserver.observe(filterWrap.value)
-  } else {
-    window.addEventListener('resize', scheduleFilterMeasurement)
-  }
-  document.addEventListener('click', closeFilterMoreOnOutsideClick)
+  document.addEventListener('keydown', onSearchKey)
   startLiveSocket()
   document.addEventListener('visibilitychange', handleVisibility)
 
@@ -1353,10 +1214,7 @@ onMounted(async () => {
 
 onUnmounted(() => {
   document.removeEventListener('visibilitychange', handleVisibility)
-  document.removeEventListener('click', closeFilterMoreOnOutsideClick)
-  window.removeEventListener('resize', scheduleFilterMeasurement)
-  if (filterMeasureTimer) clearTimeout(filterMeasureTimer)
-  if (filterResizeObserver) filterResizeObserver.disconnect()
+  document.removeEventListener('keydown', onSearchKey)
   if (timeUpdateInterval) clearInterval(timeUpdateInterval)
   stopLiveSockets()
   if (themeObserver) themeObserver.disconnect()

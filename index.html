@@ -9,6 +9,41 @@
   <link rel="apple-touch-icon" href="favicon.png">
   <link rel="manifest" href="manifest.json">
   <meta name="apiBase" content="">
+  <script>
+    // Set the canvas before styles and application code arrive.
+    try {
+      var uiPreference = localStorage.getItem('theme_preference');
+      document.documentElement.dataset.uiTheme = uiPreference === 'dark' || uiPreference !== 'light' && matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+      var lastSiteTitle = localStorage.getItem('monitor_site_title');
+      if (lastSiteTitle) document.title = lastSiteTitle;
+    } catch (_) { document.documentElement.dataset.uiTheme = 'light'; }
+    if (/^\/admin\/?$/.test(location.pathname) || /^#\/?admin(?:[/?]|$)/.test(location.hash)) {
+      document.documentElement.dataset.admin = 'true';
+      try {
+        var preference = localStorage.getItem('theme_preference');
+        document.documentElement.dataset.adminTheme = preference === 'dark' || preference !== 'light' && matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+      } catch (_) { document.documentElement.dataset.adminTheme = 'light'; }
+    }
+  </script>
+  <style>
+    html:not([data-admin]) { background: #f7f8fa; }
+    html:not([data-admin])[data-ui-theme="dark"] { background: #111215; }
+    html:not([data-admin]) body:not(.public-page) { background: inherit; }
+    html:not([data-admin]) #loading:not(.mikus-startup) { position: fixed; inset: 0; z-index: 200; display: grid; place-items: center; background: #f7f8fa; }
+    html:not([data-admin])[data-ui-theme="dark"] #loading:not(.mikus-startup) { background: #111215; }
+    html:not([data-admin]) #loading:not(.mikus-startup) .loading-spinner { width: 26px; height: 26px; margin: 0; border: 2px solid #a1a6af30; border-top-color: #7398ce; border-radius: 50%; animation: admin-boot-spin .8s linear infinite; }
+    html:not([data-admin]) #loading .loading-spinner + .loading-text { display: none; }
+    html[data-admin] { background: #f6f7f9; }
+    html[data-admin][data-admin-theme="dark"] { background: #101113; }
+    html[data-admin] body:not(.admin-page) { background: inherit; }
+    html[data-admin] body::before { display: none; }
+    html[data-admin] #loading { position: fixed; inset: 0; z-index: 200; display: grid; place-items: center; background: inherit; background-color: #f6f7f9; }
+    html[data-admin][data-admin-theme="dark"] #loading { background-color: #101113; }
+    html[data-admin] #loading .loading-text { display: none; }
+    html[data-admin] #loading .loading-spinner { width: 25px; height: 25px; margin: 0; border: 2px solid #a1a6af30; border-top-color: #7398ce; border-radius: 50%; animation: admin-boot-spin .8s linear infinite; }
+    @keyframes admin-boot-spin { to { transform: rotate(360deg); } }
+    @media (prefers-reduced-motion: reduce) { html[data-admin] #loading .loading-spinner { animation: none; } }
+  </style>
 </head>
 <body>
   <div id="loading">

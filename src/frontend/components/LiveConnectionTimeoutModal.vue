@@ -9,11 +9,11 @@
   >
     <div class="modal-dialog live-timeout-dialog">
       <div class="modal-header">
-        <div :id="titleId" class="modal-title">$ websocket --timeout</div>
+        <div :id="titleId" class="modal-title">{{ trans.liveConnectionTimeoutTitle }}</div>
       </div>
 
       <div class="warning-box live-timeout-message">
-        <span class="live-timeout-icon" aria-hidden="true">[!]</span>
+        <span class="live-timeout-icon" aria-hidden="true"><AppIcon name="alert" :size="22" /></span>
         <div>
           <strong>{{ trans.liveConnectionTimeoutTitle }}</strong>
           <p :id="messageId">{{ trans.liveConnectionTimeoutMessage }}</p>
@@ -33,6 +33,7 @@
 </template>
 
 <script setup>
+import AppIcon from './AppIcon.vue'
 const titleId = 'live-connection-timeout-title'
 const messageId = 'live-connection-timeout-message'
 

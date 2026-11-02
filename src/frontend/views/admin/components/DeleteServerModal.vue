@@ -3,13 +3,13 @@
     <div class="modal-dialog">
       <div class="modal-header">
         <div class="modal-title">{{ currentServerName }}</div>
-        <button class="modal-close" @click="$emit('close')">✕</button>
+        <button class="modal-close" @click="$emit('close')" :aria-label="trans.close"><AdminIcon name="x" :size="16" /></button>
       </div>
       <input type="hidden" :value="deleteServerId">
 
       <div class="mb-4">
         <div class="flex-center-gap-sm mb-3">
-          <span class="danger-icon text-xl">⚠️</span>
+          <span class="danger-icon text-xl"><AdminIcon name="alert" :size="16" /></span>
           <span class="danger-label">{{ trans.dangerWarning }}</span>
         </div>
         <p class="text-secondary text-sm line-height-1-6">
@@ -22,20 +22,20 @@
       <div class="form-row">
         <div class="form-group flex-1 mb-3">
           <label class="form-label">{{ trans.targetOs }}</label>
-          <select :value="deleteTargetOs" class="form-select" @change="$emit('update:delete-target-os', $event.target.value)">
+          <UiSelect :value="deleteTargetOs" class="form-select" @change="$emit('update:delete-target-os', $event.target.value)">
             <option value="linux">Linux (systemd)</option>
             <option value="unix">OpenWrt/Alpine/Synology DSM/FreeBSD</option>
             <option value="mac">macOS</option>
             <option value="windows">Windows</option>
-          </select>
+          </UiSelect>
         </div>
 
         <div class="form-group flex-1 mb-3">
           <label class="form-label">{{ trans.agentVersionSelect }}</label>
-          <select :value="deleteVersion" class="form-select" @change="$emit('update:delete-version', $event.target.value)">
+          <UiSelect :value="deleteVersion" class="form-select" @change="$emit('update:delete-version', $event.target.value)">
             <option value="go">{{ trans.agentVersionGo }}</option>
             <option value="shell">{{ trans.agentVersionShell }}</option>
-          </select>
+          </UiSelect>
         </div>
       </div>
 
@@ -44,10 +44,10 @@
           <label class="form-label">
             {{ trans.uninstallMode }}
           </label>
-          <select :value="deleteInstallMode" class="form-select" @change="$emit('update:delete-install-mode', $event.target.value)">
+          <UiSelect :value="deleteInstallMode" class="form-select" @change="$emit('update:delete-install-mode', $event.target.value)">
             <option value="current-user">{{ trans.uninstallModeCurrentUser }}</option>
             <option value="cfsm-user">{{ trans.uninstallModeCfsmUser }}</option>
-          </select>
+          </UiSelect>
         </div>
 
         <div class="form-group flex-1 mb-3">
@@ -55,10 +55,10 @@
             {{ trans.ghProxy }}
             <HelpTooltip :text="trans.ghProxyTip" />
           </label>
-          <select v-model="selectedGhProxy" class="form-select">
+          <UiSelect v-model="selectedGhProxy" class="form-select">
             <option v-for="option in ghProxyOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
             <option :value="CUSTOM_GH_PROXY_VALUE">{{ trans.custom || 'Custom' }}</option>
-          </select>
+          </UiSelect>
           <input
             v-if="showCustomGhProxy"
             type="text"
@@ -80,7 +80,7 @@
           rows="8"
         />
         <input v-else type="text" readonly :value="uninstallCommand" class="cmd-input flex-1">
-        <button @click="$emit('copy-uninstall')" class="btn btn-icon btn-green ml-2" :aria-label="trans.copy">{{ uninstallCopied ? '✅' : '📋' }}</button>
+        <button @click="$emit('copy-uninstall')" class="btn btn-icon btn-green ml-2" :aria-label="trans.copy"><AdminIcon :name="uninstallCopied ? 'check' : 'copy'" /></button>
       </div>
 
       <div class="modal-footer flex-justify-between">
@@ -92,6 +92,8 @@
 </template>
 
 <script setup>
+import UiSelect from '../../../components/UiSelect.vue'
+import AdminIcon from './AdminIcon.vue'
 import { computed, ref, watch } from 'vue'
 import HelpTooltip from '../../../components/HelpTooltip.vue'
 

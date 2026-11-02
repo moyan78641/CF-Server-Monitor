@@ -3,11 +3,13 @@
     <div class="modal-dialog edit-server-modal">
       <div class="modal-header">
         <div class="modal-title">{{ currentServerName }}</div>
-        <button class="modal-close" @click="$emit('close')">✕</button>
+        <button class="modal-close" @click="$emit('close')" :aria-label="trans.close"><AdminIcon name="x" :size="16" /></button>
       </div>
+
+      <nav class="admin-settings-tabs admin-editor-tabs" :aria-label="trans.edit"><button v-for="section in sections" :key="section.id" :class="{ 'is-active': activeSection === section.id }" :aria-pressed="activeSection === section.id" @click="activeSection = section.id"><AdminIcon :name="section.icon" :size="16" />{{ section.label }}</button></nav>
       <input type="hidden" v-model="editForm.id">
 
-      <div class="form-row">
+      <div v-show="activeSection === 'general'" class="form-row">
         <div class="form-group flex-1">
           <label class="form-label">{{ trans.hostnameLabel }} <span class="required">*</span></label>
           <input type="text" name="edit_name" autocomplete="off" v-model="editForm.name" class="form-input" placeholder="e.g. My Server">
@@ -18,7 +20,7 @@
           <input type="text" name="edit_server_group" autocomplete="off" v-model="editForm.server_group" class="form-input" placeholder="e.g. US VPS">
         </div>
       </div>
-      <div class="form-row">
+      <div v-show="activeSection === 'general'" class="form-row">
         <div class="form-group flex-1">
           <label class="form-label">{{ trans.tags }}</label>
           <input type="text" name="edit_tags" autocomplete="off" v-model="editForm.tags" class="form-input" :placeholder="trans.tagsPlaceholder">
@@ -30,17 +32,17 @@
         </div>
       </div>
 
-      <div class="form-group">
+      <div v-show="activeSection === 'general'" class="form-group">
         <label class="form-label">{{ trans.note }}</label>
         <textarea name="edit_note" autocomplete="off" v-model="editForm.note" class="form-textarea" rows="2" :placeholder="trans.notePlaceholder"></textarea>
       </div>
 
-      <div class="form-row mobile-two-row">
+      <div v-show="activeSection === 'billing'" class="form-row mobile-two-row">
         <div class="form-group flex-1">
           <label class="form-label">{{ trans.currency }}</label>
-          <select v-model="editForm.currency" class="form-select">
+          <UiSelect v-model="editForm.currency" class="form-select">
             <option v-for="item in currencySelectOptions" :key="item.symbol" :value="item.symbol">{{ currencyLabel(item) }}</option>
-          </select>
+          </UiSelect>
         </div>
 
         <div class="form-group flex-1">
@@ -50,9 +52,9 @@
 
         <div class="form-group flex-1">
           <label class="form-label">{{ trans.billingCycle }}</label>
-          <select v-model="editForm.billing_cycle" class="form-select">
+          <UiSelect v-model="editForm.billing_cycle" class="form-select">
             <option v-for="item in billingCycleOptions" :key="item.value" :value="item.value">{{ cycleLabel(item) }}</option>
-          </select>
+          </UiSelect>
         </div>
 
         <div class="form-group flex-1">
@@ -61,29 +63,29 @@
         </div>
       </div>
 
-      <div class="form-row mobile-two-row">
+      <div v-show="activeSection === 'billing'" class="form-row mobile-two-row">
         <div class="form-group flex-1">
           <label class="form-label">{{ trans.trafficLimit }} (GB)</label>
           <input type="number" name="edit_traffic_limit" autocomplete="off" v-model="editForm.traffic_limit" class="form-input" placeholder="e.g. 1000" min="0" step="1">
         </div>
         <div class="form-group flex-1">
           <label class="form-label">{{ trans.trafficCalcType }}</label>
-          <select v-model="editForm.traffic_calc_type" class="form-select">
+          <UiSelect v-model="editForm.traffic_calc_type" class="form-select">
             <option value="total">{{ trans.trafficCalcTotal }}</option>
             <option value="ul">{{ trans.trafficCalcUl }}</option>
             <option value="dl">{{ trans.trafficCalcDl }}</option>
             <option value="max">{{ trans.trafficCalcMax }}</option>
-          </select>
+          </UiSelect>
         </div>
         <div class="form-group flex-1">
           <label class="form-label">
             {{ trans.trafficResetDay }}
             <HelpTooltip :text="trans.trafficResetDayTip" />
           </label>
-          <select ref="editResetDayRef" name="edit_reset_day" v-model="editForm.reset_day" class="form-select">
+          <UiSelect ref="editResetDayRef" name="edit_reset_day" v-model="editForm.reset_day" class="form-select">
             <option :value="0">0</option>
             <option v-for="day in 31" :key="day" :value="day">{{ day }}</option>
-          </select>
+          </UiSelect>
         </div>
         <div class="form-group flex-1">
           <label class="form-label">
@@ -94,57 +96,57 @@
         </div>
       </div>
 
-      <div class="form-row mobile-two-row">
+      <div v-show="activeSection === 'monitoring'" class="form-row mobile-two-row">
         <div class="form-group flex-1">
           <label class="form-label">
             {{ trans.collectInterval }}
             <HelpTooltip :text="trans.collectIntervalHint" />
           </label>
-          <select v-model="editForm.collect_interval" class="form-select">
+          <UiSelect v-model="editForm.collect_interval" class="form-select">
             <option :value="0">0</option>
             <option :value="1">1</option>
             <option :value="2">2</option>
             <option :value="5">5</option>
             <option :value="10">10</option>
-          </select>
+          </UiSelect>
         </div>
         <div class="form-group flex-1">
           <label class="form-label">{{ trans.reportInterval }}</label>
-          <select v-model="editForm.report_interval" class="form-select">
+          <UiSelect v-model="editForm.report_interval" class="form-select">
             <option :value="30">30</option>
             <option :value="60">60</option>
             <option :value="120">120</option>
             <option :value="180">180</option>
-          </select>
+          </UiSelect>
         </div>
         <div class="form-group flex-1">
           <label class="form-label">
             {{ trans.connectionMode }}
             <HelpTooltip v-if="!isWssReportEnabled" :text="trans.wssReportDisabledConnectionHint" />
           </label>
-          <select v-model="editForm.connection_mode" class="form-select" :disabled="!isWssReportEnabled">
+          <UiSelect v-model="editForm.connection_mode" class="form-select" :disabled="!isWssReportEnabled">
             <option value="auto">{{ trans.connectionModeAuto }}</option>
             <option value="http">{{ trans.connectionModeHttp }}</option>
-          </select>
+          </UiSelect>
         </div>
         <div v-if="isWssReportEnabled && editForm.connection_mode === 'auto'" class="form-group flex-1">
           <label class="form-label">{{ trans.wssReportInterval }}</label>
-          <select v-model="editForm.wss_report_interval" class="form-select">
+          <UiSelect v-model="editForm.wss_report_interval" class="form-select">
             <option v-for="second in 5" :key="second" :value="second">{{ second }}</option>
-          </select>
+          </UiSelect>
         </div>
       </div>
 
-      <div class="form-row mobile-two-row">
+      <div v-show="activeSection === 'monitoring'" class="form-row mobile-two-row">
         <div class="form-group flex-1">
           <label class="form-label">
             {{ trans.pingMode }}
             <HelpTooltip :text="trans.pingModeIcmpRootHint" />
           </label>
-          <select v-model="editForm.ping_mode" class="form-select">
+          <UiSelect v-model="editForm.ping_mode" class="form-select">
             <option value="tcp">TCP</option>
             <option value="icmp">ICMP (root)</option>
-          </select>
+          </UiSelect>
         </div>
         <div class="form-group flex-1">
           <label class="form-label">
@@ -169,7 +171,7 @@
         </div>
       </div>
 
-      <div class="form-row">
+      <div v-show="activeSection === 'monitoring'" class="form-row">
         <div class="form-group flex-1">
           <label class="form-label">
             {{ settings.custom_ct_name || trans.customCt }}
@@ -187,7 +189,7 @@
           <p v-if="pingNodeErrors.custom_cu" class="text-red text-sm mt-1">{{ pingNodeErrors.custom_cu }}</p>
         </div>
       </div>
-      <div class="form-row">
+      <div v-show="activeSection === 'monitoring'" class="form-row">
         <div class="form-group flex-1">
           <label class="form-label">
             {{ settings.custom_cm_name || trans.customCm }}
@@ -205,7 +207,7 @@
           <p v-if="pingNodeErrors.custom_bd" class="text-red text-sm mt-1">{{ pingNodeErrors.custom_bd }}</p>
         </div>
       </div>
-      <div class="form-row">
+      <div v-show="activeSection === 'monitoring'" class="form-row">
         <div v-for="(field, index) in ['node_1', 'node_2']" :key="field" class="form-group flex-1">
           <label class="form-label">
             {{ settings[`${field}_name`] || `Node ${index + 1}` }}
@@ -215,7 +217,7 @@
           <p v-if="pingNodeErrors[field]" class="text-red text-sm mt-1">{{ pingNodeErrors[field] }}</p>
         </div>
       </div>
-      <div class="form-row">
+      <div v-show="activeSection === 'monitoring'" class="form-row">
         <div v-for="(field, index) in ['node_3', 'node_4']" :key="field" class="form-group flex-1">
           <label class="form-label">
             {{ settings[`${field}_name`] || `Node ${index + 3}` }}
@@ -226,42 +228,43 @@
         </div>
       </div>
       <div class="form-row">
-        <div class="form-group flex-1">
+        <div v-show="activeSection === 'billing'" class="form-group flex-1">
           <div class="checkbox-item no-margin">
-            <input type="checkbox" v-model="editForm.auto_renewal">
-            <label>
+            <input id="edit_auto_renewal" type="checkbox" v-model="editForm.auto_renewal">
+            <label for="edit_auto_renewal">
               <b>{{ trans.autoRenewal }}</b>
             </label>
           </div>
         </div>
 
-        <div class="form-group">
+        <div v-show="activeSection === 'monitoring'" class="form-group">
           <div class="checkbox-item no-margin">
-            <input type="checkbox" :checked="editForm.auto_update" @change="handleAutoUpdateChange">
-            <label>
+            <input id="edit_auto_update" type="checkbox" :checked="editForm.auto_update" @change="handleAutoUpdateChange">
+            <label for="edit_auto_update">
               <b>{{ trans.autoUpdate }}</b>
             </label>
           </div>
         </div>
 
-        <div class="form-group">
+        <div v-show="activeSection === 'general'" class="form-group">
           <div class="checkbox-item no-margin">
-            <input type="checkbox" v-model="editForm.is_hidden">
-            <label>
+            <input id="edit_is_hidden" type="checkbox" v-model="editForm.is_hidden">
+            <label for="edit_is_hidden">
               <b>{{ trans.hideFromPublic }}</b>
             </label>
           </div>
         </div>
 
-        <div v-if="hasNodeNotificationOptions" class="form-group">
+        <div v-show="activeSection === 'monitoring'" v-if="hasNodeNotificationOptions" class="form-group">
           <div class="checkbox-item no-margin">
-            <input type="checkbox" v-model="editForm.offline_notify_disabled">
-            <label>
+            <input id="edit_offline_notify_disabled" type="checkbox" v-model="editForm.offline_notify_disabled">
+            <label for="edit_offline_notify_disabled">
               <b>{{ trans.disableOfflineNotify }}</b>
             </label>
           </div>
         </div>
       </div>
+      <button v-if="hasPingNodeErrors && activeSection !== 'monitoring'" class="btn btn-red" @click="activeSection = 'monitoring'">{{ trans.invalidPingNodeFormat }}</button>
       <div class="modal-footer flex-justify-between">
         <button @click="$emit('save')" class="btn btn-primary" :disabled="hasPingNodeErrors">{{ trans.save }}</button>
         <button @click="$emit('close')" class="btn">{{ trans.cancel }}</button>
@@ -271,7 +274,9 @@
 </template>
 
 <script setup>
-import { computed, watch } from 'vue'
+import UiSelect from '../../../components/UiSelect.vue'
+import AdminIcon from './AdminIcon.vue'
+import { computed, ref, watch } from 'vue'
 import HelpTooltip from '../../../components/HelpTooltip.vue'
 import { PING_NODE_FIELDS, validatePingNode } from '../../../utils/pingNode.js'
 import { currentLang } from '../../../utils/i18n.js'
@@ -285,6 +290,14 @@ const props = defineProps({
   currentServerName: { type: String, default: '' },
   settings: { type: Object, required: true }
 })
+
+const activeSection = ref('general')
+const sections = computed(() => [
+  { id: 'general', label: props.trans.basicInfo, icon: 'server' },
+  { id: 'billing', label: props.trans.billing, icon: 'database' },
+  { id: 'monitoring', label: props.trans.adminMonitoring, icon: 'activity' },
+])
+watch(() => props.show, (show) => { if (show) activeSection.value = 'general' })
 
 const pingNodeErrorMessage = computed(() => (
   props.trans.invalidPingNodeFormat || 'Use domain, IPv4, or host:port. Port must be 1-65535.'

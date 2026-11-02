@@ -1,11 +1,12 @@
 <template>
-  <div>
+  <div class="admin-app">
     <AdminLogin
       v-if="!isLoggedIn"
       :trans="trans"
       :is-multiple-mode="isMultipleMode"
       :api-bases="apiBases"
       :selected-api-index="selectedApiIndex"
+      :site-title="appConfig.site_title"
       :login-form="loginForm"
       :password-visible="passwordVisible"
       :login-error="loginError"
@@ -19,93 +20,30 @@
       @api-index-change="handleApiIndexChange"
     />
 
-    <div v-else class="container admin-container" id="admin-content">
-      <TerminalHeader :title="trans.adminPanel" />
-      <div v-if="adminSiteLoading" class="admin-loading-overlay">
-        <div class="loading-content">
-          <div class="loading-spinner"></div>
-          <div class="loading-text">$ {{ trans.switchingSite }}</div>
-        </div>
-      </div>
-
-      <div class="main-panel">
-        <div class="panel-header">
-          <div class="panel-title">
-            <span class="prompt">$</span> {{ trans.sudoStatus }}
-          </div>
-          <div class="header-actions">
-            <button @click="refreshServers" class="btn" :disabled="adminSiteLoading">↻ {{ trans.refresh }}</button>
-            <select
-              v-if="isMultipleMode"
-              v-model.number="selectedApiIndex"
-              class="form-select admin-site-select"
-              :disabled="adminSiteLoading"
-              @change="handleAdminApiIndexChange"
-            >
-              <option
-                v-for="(base, index) in apiBases"
-                :key="index"
-                :value="index"
-              >
-                [{{ index }}] {{ base }}
-              </option>
-            </select>
-            <HelpTooltip v-if="isMultipleMode" :text="trans.apiEndpoint" />
-            <button @click="logout" class="btn btn-red">🚪 {{ trans.logout }}</button>
-          </div>
-        </div>
-
-        <div class="stats-grid" id="stats-panel">
-          <div class="stat-card">
-            <div class="stat-main-value" id="stat-total">{{ stats.total }}</div>
-            <div class="stat-label">{{ trans.totalServers }}</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-main-value" id="stat-online">{{ stats.online }}</div>
-            <div class="stat-label">{{ trans.online }}</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-main-value" id="stat-offline">{{ stats.offline }}</div>
-            <div class="stat-label">{{ trans.offline }}</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-main-value" id="stat-avg-cpu">{{ stats.avg_cpu }}%</div>
-            <div class="stat-label">{{ trans.avgCpu }}</div>
-          </div>
-        </div>
-      </div>
-
-      <div class="main-panel">
-        <div class="tabs">
-          <button
-            class="tab-btn"
-            :class="{ active: activeTab === 'servers' }"
-            @click="activeTab = 'servers'"
-          >{{ trans.servers }}</button>
-          <button
-            class="tab-btn"
-            :class="{ active: activeTab === 'settings' }"
-            @click="activeTab = 'settings'"
-          >{{ trans.settings }}</button>
-          <button
-            class="tab-btn"
-            :class="{ active: activeTab === 'database' }"
-            @click="activeTab = 'database'"
-          >{{ trans.dbManagement }}</button>
-          <button
-            class="tab-btn"
-            :class="{ active: activeTab === 'themeStore' }"
-            @click="activeTab = 'themeStore'"
-          >{{ trans.themeStore }}</button>
-          <button
-            class="tab-btn"
-            :class="{ active: activeTab === 'donation' }"
-            @click="activeTab = 'donation'"
-          >{{ trans.donation }}</button>
-        </div>
-
+    <AdminShell
+      v-else
+      :trans="trans"
+      :active-tab="activeTab"
+      :site-title="settings.site_title || appConfig.site_title"
+      :node-count="serversLoaded ? servers.length : undefined"
+      :version="appConfig.version"
+      :refreshing="adminSiteLoading || refreshing"
+      @navigate="activeTab = $event"
+      @logout="logout"
+      @refresh="refreshServers"
+    >
+      <template #site-picker>
+        <UiSelect v-if="isMultipleMode" v-model.number="selectedApiIndex" class="form-select admin-site-select" :aria-label="trans.apiEndpoint" :disabled="adminSiteLoading" @change="handleAdminApiIndexChange">
+          <option v-for="(base, index) in apiBases" :key="index" :value="index">{{ base }}</option>
+        </UiSelect>
+      </template>
+      <div v-if="adminSiteLoading" class="admin-loading-indicator" role="status"><AdminIcon name="loader" class="is-spinning" />{{ trans.switchingSite }}</div>
+      <AdminOverview v-show="activeTab === 'overview'" :trans="trans" :servers="servers" :stats="stats" :loading="!serversLoaded" @navigate="handleOverviewNavigate" />
+      <div class="admin-content-panels">
         <ServerTable
+          ref="serverTableRef"
           v-model:new-server-name="newServerName"
+          :adding-server="addingServer"
           v-model:new-server-group="newServerGroup"
           :trans="trans"
           :servers="servers"
@@ -212,12 +150,12 @@
         <div class="modal-dialog">
           <div class="modal-header">
             <div class="modal-title">{{ trans.autoUpdateRiskTitle }}</div>
-            <button class="modal-close" @click="cancelAutoUpdateWarning">✕</button>
+            <button class="modal-close" @click="cancelAutoUpdateWarning" :aria-label="trans.close"><AdminIcon name="x" :size="16" /></button>
           </div>
 
           <div class="danger-box mb-4">
             <div class="flex-center-gap-sm mb-2">
-              <span class="danger-icon text-xl">⚠️</span>
+              <span class="danger-icon text-xl"><AdminIcon name="alert" :size="16" /></span>
               <span class="danger-label">{{ trans.autoUpdateRiskTitle }}</span>
             </div>
             <p class="text-secondary text-sm line-height-1-6">
@@ -314,13 +252,13 @@
       <div id="dbModal" class="modal-overlay" :class="{ active: showDbModal }">
         <div class="modal-dialog">
           <div class="modal-header">
-            <div class="modal-title">$ {{ dbOperation === 'clearHistory' ? 'CLEAR HISTORY' : 'ALTER DATABASE' }}</div>
-            <button class="modal-close" @click="closeDbModal" :disabled="dbLoading">✕</button>
+            <div class="modal-title">{{ dbOperation === 'clearHistory' ? trans.clearHistory : trans.upgradeDatabase }}</div>
+            <button class="modal-close" @click="closeDbModal" :disabled="dbLoading" :aria-label="trans.close"><AdminIcon name="x" :size="16" /></button>
           </div>
 
           <div v-if="dbOperation === 'clearHistory'" class="mb-4">
             <div class="flex-center-gap-sm mb-3">
-              <span class="danger-icon text-xl">⚠️</span>
+              <span class="danger-icon text-xl"><AdminIcon name="alert" :size="16" /></span>
               <span class="danger-label">{{ trans.dangerOperation }}</span>
             </div>
             <p class="text-secondary text-sm line-height-1-6">
@@ -330,7 +268,7 @@
 
           <div v-if="dbOperation === 'upgrade'" class="mb-4">
             <div class="flex-center-gap-sm mb-3">
-              <span class="warning-icon text-xl">ℹ️</span>
+              <span class="warning-icon text-xl"><AdminIcon name="help" :size="16" /></span>
               <span style="color: var(--accent-yellow); font-weight: 600;">{{ trans.upgradeDatabase }}</span>
             </div>
             <p class="text-secondary text-sm line-height-1-6">
@@ -341,7 +279,7 @@
           <div v-if="dbResult" :class="dbResult.success ? 'warning-box' : 'danger-box'" class="mb-4">
             <div class="flex-center-gap-sm">
               <span :style="{ color: dbResult.success ? 'var(--accent-green)' : 'var(--accent-red)', fontWeight: '600' }">
-                {{ dbResult.success ? '✅' : '❌' }} {{ getMessage(dbResult.message) || (dbResult.success ? trans.operationSuccess : trans.operationFailed) }}
+                <AdminIcon :name="dbResult.success ? 'check' : 'error'" /> {{ getMessage(dbResult.message) || (dbResult.success ? trans.operationSuccess : trans.operationFailed) }}
               </span>
             </div>
             <div v-if="dbResult.error" class="text-red mt-2">
@@ -366,8 +304,8 @@
       <div v-if="d1UsageResult" id="d1UsageModal" class="modal-overlay active">
         <div class="modal-dialog">
           <div class="modal-header">
-            <div class="modal-title">$ D1, Workers & Durable Objects quota --utc</div>
-            <button class="modal-close" @click="d1UsageResult = null">✕</button>
+            <div class="modal-title">{{ trans.queryD1Quota }}</div>
+            <button class="modal-close" @click="d1UsageResult = null" :aria-label="trans.close"><AdminIcon name="x" :size="16" /></button>
           </div>
 
           <div v-if="d1UsageResult.success" class="mb-4">
@@ -526,12 +464,12 @@
         <div class="modal-dialog">
           <div class="modal-header">
             <div class="modal-title">$ {{ trans.validationError }}</div>
-            <button class="modal-close" @click="validationError = null">✕</button>
+            <button class="modal-close" @click="validationError = null" :aria-label="trans.close"><AdminIcon name="x" :size="16" /></button>
           </div>
 
           <div class="danger-box mb-4">
             <div class="flex-center-gap-sm">
-              <span class="danger-icon text-xl">⚠️</span>
+              <span class="danger-icon text-xl"><AdminIcon name="alert" :size="16" /></span>
               <span class="danger-label">{{ validationError }}</span>
             </div>
           </div>
@@ -547,20 +485,20 @@
         <div class="modal-dialog">
           <div class="modal-header">
             <div class="modal-title">$ save --result</div>
-            <button class="modal-close" @click="saveResult = null">✕</button>
+            <button class="modal-close" @click="saveResult = null" :aria-label="trans.close"><AdminIcon name="x" :size="16" /></button>
           </div>
 
           <div v-if="saveResult.success" class="success-box mb-4">
             <div class="flex-center-gap-sm">
               <span style="color: var(--accent-green); font-weight: 600;">
-                ✅ {{ saveResult.message || trans.saveSuccess }}
+                <AdminIcon name="success" :size="16" /> {{ saveResult.message || trans.saveSuccess }}
               </span>
             </div>
           </div>
 
           <div v-else class="danger-box mb-4">
             <div class="flex-center-gap-sm">
-              <span class="danger-label">❌ {{ saveResult.error }}</span>
+              <span class="danger-label"><AdminIcon name="error" :size="16" /> {{ saveResult.error }}</span>
             </div>
           </div>
 
@@ -574,8 +512,8 @@
       <div v-if="alertMessage" class="modal-overlay active">
         <div class="modal-dialog">
           <div class="modal-header">
-            <div class="modal-title">$ alert</div>
-            <button class="modal-close" @click="alertMessage = null">✕</button>
+            <div class="modal-title">{{ trans.notifications }}</div>
+            <button class="modal-close" @click="alertMessage = null" :aria-label="trans.close"><AdminIcon name="x" :size="16" /></button>
           </div>
 
           <div class="mb-4">
@@ -589,15 +527,21 @@
         </div>
       </div>
 
-      <Footer />
-    </div>
+      <template #footer><Footer /></template>
+    </AdminShell>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch, nextTick, inject } from 'vue'
+import UiSelect from '../../components/UiSelect.vue'
+import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick, inject } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import TerminalHeader from '../../components/TerminalHeader.vue'
+import './admin.css'
+import { useAdminDialogs } from './useAdminDialogs.js'
+import { toggleVisibleSelection, reorderServers } from './serverFilters.js'
+import AdminShell from './components/AdminShell.vue'
+import AdminIcon from './components/AdminIcon.vue'
+import AdminOverview from './components/AdminOverview.vue'
 import Footer from '../../components/Footer.vue'
 import HelpTooltip from '../../components/HelpTooltip.vue'
 import AdminLogin from './components/AdminLogin.vue'
@@ -623,6 +567,7 @@ import { usePasswordVisibility } from '../../composables/usePasswordVisibility'
 import { useTurnstile } from './composables/useTurnstile'
 import { detectBillingCycle, detectCurrencySymbol, normalizeBillingCycle, normalizeCurrency, normalizePrice, renewExpireDateIfNeeded } from '../../utils/server.js'
 
+useAdminDialogs()
 const trans = useTranslation()
 const route = useRoute()
 const router = useRouter()
@@ -927,18 +872,29 @@ const syncApiIndexQuery = () => {
 
 const adminApiForSite = (data) => adminApi(data, selectedApiIndex.value)
 
-const isLoggedIn = ref(false)
+const isLoggedIn = ref(Boolean(localStorage.getItem(STORAGE.JWT_TOKEN)) || appConfig?.authorization === true)
 const loginForm = ref({ username: '', password: '' })
 const loginError = ref('')
 const loginLoading = ref(false)
 const adminSiteLoading = ref(false)
-const activeTab = ref('servers')
+const adminTabs = ['overview', 'servers', 'settings', 'database', 'themeStore', 'donation']
+const activeTab = ref(adminTabs.includes(route.query.view) ? route.query.view : 'overview')
+const refreshing = ref(false)
+const serversLoaded = ref(false)
+watch(activeTab, (view) => {
+  router.replace({ path: route.path, query: { ...route.query, view } })
+  window.scrollTo({ top: 0, behavior: 'instant' })
+})
+watch(() => route.query.view, (view) => {
+  if (adminTabs.includes(view)) activeTab.value = view
+})
 const servers = ref([])
 const selectedServers = ref([])
 const stats = ref({ total: '-', online: 0, offline: 0, avg_cpu: 0 })
 const groups = ref(['Default'])
 const latestAgentVersion = ref('')
 const newServerName = ref('')
+const addingServer = ref(false)
 const newServerGroup = ref('')
 
 const settings = ref({
@@ -1137,6 +1093,14 @@ const testNotificationLoading = ref(false)
 const saveResult = ref(null)
 
 const settingsPanelRef = ref(null)
+const serverTableRef = ref(null)
+const handleOverviewNavigate = async (tab, action) => {
+  activeTab.value = tab
+  await nextTick()
+  if (tab === 'servers' && action === 'add') serverTableRef.value?.openAddForm()
+  else if (tab === 'servers' && ['online', 'offline'].includes(action)) serverTableRef.value?.filterStatus(action)
+  else if (tab === 'settings' && action) settingsPanelRef.value?.openSection(action)
+}
 
 const showCopyModal = ref(false)
 const copyServerId = ref('')
@@ -1691,6 +1655,7 @@ const loadServers = async (options = {}) => {
     if (!result.error) {
       const data = result.data
       servers.value = data.servers || []
+      serversLoaded.value = true
       stats.value = data.stats || { total: servers.value.length, online: 0, offline: servers.value.length, avg_cpu: 0 }
 
       const serverGroups = [...new Set(servers.value.map(s => s.server_group || trans.value.default))]
@@ -1720,22 +1685,29 @@ const refreshServersCache = async () => {
 }
 
 const refreshServers = async () => {
-  await Promise.all([
-    loadServers(),
-    loadLatestAgentVersion()
-  ])
+  if (refreshing.value) return
+  refreshing.value = true
+  try {
+    const [result] = await Promise.all([loadServers(), loadLatestAgentVersion()])
+    if (result?.error) alertMessage.value = getMessage(result.error) || trans.value.operationFailed
+  } finally {
+    refreshing.value = false
+  }
 }
 
 const addServer = async () => {
+  if (addingServer.value) return
   const name = newServerName.value.trim()
   if (!name) {
     validationError.value = trans.value.enterServerName
     return
   }
 
+  addingServer.value = true
   try {
     const result = await adminApiForSite({ action: 'add', name, server_group: newServerGroup.value })
     if (!result.error) {
+      serverTableRef.value?.closeAddForm()
       saveResult.value = { success: true, message: getMessage(result.data.message) || trans.value.serverAdded }
       newServerName.value = ''
       newServerGroup.value = ''
@@ -1745,6 +1717,8 @@ const addServer = async () => {
     }
   } catch (e) {
     saveResult.value = { success: false, error: e.message }
+  } finally {
+    addingServer.value = false
   }
 }
 
@@ -2436,17 +2410,13 @@ const saveBatchEdit = async () => {
   }
 }
 
-const handleSelectAll = (e) => {
-  const checked = e.target.checked
-  selectedServers.value = checked ? servers.value.map(s => s.id) : []
+const handleSelectAll = ({ checked, ids }) => {
+  selectedServers.value = toggleVisibleSelection(selectedServers.value, ids, checked)
 }
 
-const toggleSelectAll = () => {
-  if (selectedServers.value.length === servers.value.length) {
-    selectedServers.value = []
-  } else {
-    selectedServers.value = servers.value.map(s => s.id)
-  }
+const toggleSelectAll = (ids = servers.value.map(server => server.id)) => {
+  const allSelected = ids.length > 0 && ids.every(id => selectedServers.value.includes(id))
+  selectedServers.value = toggleVisibleSelection(selectedServers.value, ids, !allSelected)
 }
 
 const toggleServer = (id) => {
@@ -2476,17 +2446,8 @@ const handleDrop = async (e, targetId) => {
     return
   }
 
-  const rows = Array.from(document.querySelectorAll('#tab-servers .table-wrapper .terminal-table tbody > .server-row[data-server-id]'))
-  const draggedIndex = rows.findIndex(r => r.dataset.serverId === draggedRow)
-  const targetIndex = rows.findIndex(r => r.dataset.serverId === targetId)
-  if (draggedIndex < 0 || targetIndex < 0) {
-    draggedRow = null
-    return
-  }
-
-  const orders = rows.map(r => r.dataset.serverId)
-  const [dragged] = orders.splice(draggedIndex, 1)
-  orders.splice(targetIndex, 0, dragged)
+  const orders = reorderServers(servers.value, draggedRow, targetId)
+  if (!orders) { draggedRow = null; return }
 
   try {
     const result = await adminApiForSite({ action: 'save_order', orders })
@@ -2634,6 +2595,8 @@ watch(() => route.query.apiIndex, async (value) => {
 })
 
 onMounted(() => {
+  document.body.classList.add('admin-page')
   initAdmin()
 })
+onBeforeUnmount(() => document.body.classList.remove('admin-page'))
 </script>

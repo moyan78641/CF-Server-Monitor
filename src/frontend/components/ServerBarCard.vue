@@ -1,5 +1,5 @@
 <template>
-  <router-link :to="to" class="server-card" :data-region="regionCode">
+  <router-link :to="to" class="server-card" :class="{ 'is-offline': !isOnline }" :data-region="regionCode">
     <div class="server-card-header">
       <div class="server-identity">
         <span v-if="regionCode && regionCode !== 'xx'" class="country-os-icons">
@@ -7,7 +7,7 @@
           <OsIcon :os="server.os" />
         </span>
         <span v-else class="country-os-icons">
-          <span class="flag-fallback">🏳️</span>
+          <span class="flag-fallback"><AppIcon name="globe" :size="17" /></span>
           <OsIcon :os="server.os" />
         </span>
         <span class="server-name">{{ server.name }}</span>
@@ -16,13 +16,14 @@
     </div>
     <div class="server-meta">
       <div class="card-meta">
-        <div v-if="sysConfig.show_price && priceText" class="card-meta-item">💰 {{ priceText }}</div>
+        <div v-if="sysConfig.show_price && priceText" class="card-meta-item"><AppIcon name="wallet" :size="13" /> {{ priceText }}</div>
         <div v-if="sysConfig.show_expire && server.expire_date" class="card-meta-item card-meta-expire">
-          📅 <span :class="{ 'expired': isExpired }">{{ expireText }}</span>
+          <AppIcon name="calendar" :size="13" /> <span :class="{ 'expired': isExpired }">{{ expireText }}</span>
           <span v-if="expireDateTitle" class="card-meta-tooltip">{{ expireDateTitle }}</span>
         </div>
       </div>
       <div class="card-badges">
+          <span v-if="server.server_group" class="badge badge-group" :title="server.server_group">{{ server.server_group }}</span>
         <span v-for="(tag, index) in tagList" :key="tag" :class="['badge', 'badge-tag', tagColorClass(index)]">{{ tag }}</span>
         <span v-if="hasPublicIPv4 && hasPublicIPv6" class="badge badge-v4-v6">IPv4/6</span>
         <template v-else>
@@ -36,7 +37,7 @@
         <span class="stat-key">CPU</span>
         <div class="stat-content stat-content-meter">
           <div class="stat-bar-container">
-            <div class="stat-bar-fill" :style="{ width: cpuPercent + '%', background: getUsageColor(cpuPercent) }"></div>
+            <div class="stat-bar-fill" :style="{ transform: `scaleX(${(cpuPercent) / 100})`, background: getUsageColor(cpuPercent) }"></div>
           </div>
           <span class="stat-value">{{ cpuPercent.toFixed(2) }}%</span>
         </div>
@@ -45,7 +46,7 @@
         <span class="stat-key">RAM</span>
         <div class="stat-content stat-content-meter">
           <div class="stat-bar-container">
-            <div class="stat-bar-fill" :style="{ width: ramPercent + '%', background: getUsageColor(ramPercent) }"></div>
+            <div class="stat-bar-fill" :style="{ transform: `scaleX(${(ramPercent) / 100})`, background: getUsageColor(ramPercent) }"></div>
           </div>
           <span class="stat-value">{{ ramPercent.toFixed(2) }}%</span>
         </div>
@@ -54,7 +55,7 @@
         <span class="stat-key">DISK</span>
         <div class="stat-content stat-content-meter">
           <div class="stat-bar-container">
-            <div class="stat-bar-fill" :style="{ width: diskPercent + '%', background: getUsageColor(diskPercent) }"></div>
+            <div class="stat-bar-fill" :style="{ transform: `scaleX(${(diskPercent) / 100})`, background: getUsageColor(diskPercent) }"></div>
           </div>
           <span class="stat-value">{{ diskPercent.toFixed(2) }}%</span>
         </div>
@@ -64,7 +65,7 @@
         <div class="stat-content stat-content-meter">
           <template v-if="server.traffic_limit">
             <div class="stat-bar-container">
-              <div class="stat-bar-fill" :style="{ width: Math.min(100, trafficUsagePercent) + '%', background: getUsageColor(trafficUsagePercent) }"></div>
+              <div class="stat-bar-fill" :style="{ transform: `scaleX(${(Math.min(100, trafficUsagePercent)) / 100})`, background: getUsageColor(trafficUsagePercent) }"></div>
             </div>
             <span class="stat-value">{{ trafficUsagePercentText }}%</span>
           </template>
@@ -96,7 +97,7 @@
         <div class="stat-content">
           <span class="net-down">▼ {{ totalRxMonthly }}</span>
           <span class="net-up">▲ {{ totalTxMonthly }}</span>
-          <span v-if="sysConfig.show_tf && server.traffic_limit" class="stat-limit">/ 📦 {{ formatBytes(server.traffic_limit * 1024 * 1024 * 1024) }}</span>
+          <span v-if="sysConfig.show_tf && server.traffic_limit" class="stat-limit">/ <AppIcon name="network" :size="12" /> {{ formatBytes(server.traffic_limit * 1024 * 1024 * 1024) }}</span>
         </div>
       </div>
     </div>
@@ -118,6 +119,7 @@
 </template>
 
 <script setup>
+import AppIcon from './AppIcon.vue'
 import OsIcon from './OsIcon.vue'
 import ServerLatencyPanel from './ServerLatencyPanel.vue'
 import { DEFAULT_SERVER_CARD_CONFIG, useServerCardData } from '../composables/useServerCardData'
@@ -141,6 +143,7 @@ const {
   trans,
   regionCode,
   statusColor,
+  isOnline,
   statusText,
   cpuPercent,
   ramPercent,

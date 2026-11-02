@@ -5,7 +5,7 @@
 /* --------------------------------------------------------------------------
    1. Google Fonts Import
    -------------------------------------------------------------------------- */
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+/* Use installed fonts; first paint does not depend on a remote font service. */
 
 /* --------------------------------------------------------------------------
    2. CSS Variables (Design Tokens)

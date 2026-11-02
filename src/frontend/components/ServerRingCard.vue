@@ -1,5 +1,5 @@
 <template>
-  <router-link :to="to" class="server-card server-card-ring" :data-region="regionCode">
+  <router-link :to="to" class="server-card server-card-ring" :class="{ 'is-offline': !isOnline }" :data-region="regionCode">
     <div class="server-card-ring-header">
       <div class="server-card-header">
         <div class="server-identity">
@@ -8,7 +8,7 @@
             <OsIcon :os="server.os" />
           </span>
           <span v-else class="country-os-icons">
-            <span class="flag-fallback">🏳️</span>
+            <span class="flag-fallback"><AppIcon name="globe" :size="17" /></span>
             <OsIcon :os="server.os" />
           </span>
           <span class="server-name">{{ server.name }}</span>
@@ -17,13 +17,14 @@
       </div>
       <div class="server-meta">
         <div class="card-meta">
-          <div v-if="sysConfig.show_price && priceText" class="card-meta-item">💰 {{ priceText }}</div>
+          <div v-if="sysConfig.show_price && priceText" class="card-meta-item"><AppIcon name="wallet" :size="13" /> {{ priceText }}</div>
           <div v-if="sysConfig.show_expire && server.expire_date" class="card-meta-item card-meta-expire">
-            📅 <span :class="{ 'expired': isExpired }">{{ expireText }}</span>
+            <AppIcon name="calendar" :size="13" /> <span :class="{ 'expired': isExpired }">{{ expireText }}</span>
             <span v-if="expireDateTitle" class="card-meta-tooltip">{{ expireDateTitle }}</span>
           </div>
         </div>
         <div class="card-badges">
+          <span v-if="server.server_group" class="badge badge-group" :title="server.server_group">{{ server.server_group }}</span>
           <span v-for="(tag, index) in tagList" :key="tag" :class="['badge', 'badge-tag', tagColorClass(index)]">{{ tag }}</span>
           <span v-if="hasPublicIPv4 && hasPublicIPv6" class="badge badge-v4-v6">IPv4/6</span>
           <template v-else>
@@ -37,46 +38,9 @@
     <div class="server-card-ring-divider"></div>
 
     <div class="server-card-ring-metrics">
-      <div class="metric-ring-item">
-        <div class="metric-ring-chart" :style="getRingStyle(cpuPercent, getUsageColor(cpuPercent))">
-          <span class="metric-ring-track"></span>
-          <span class="metric-ring-progress"></span>
-          <span class="metric-ring-center">{{ roundedPercent(cpuPercent) }}%</span>
-        </div>
-        <div class="metric-ring-label">CPU</div>
-        <div class="metric-ring-subtext">{{ cpuCores }} Cores</div>
-      </div>
-
-      <div class="metric-ring-item">
-        <div
-          class="metric-ring-chart metric-ring-chart-memory"
-          :class="{ 'has-swap-ring': hasSwapData }"
-          :style="getMemoryRingStyle(ramPercent, getUsageColor(ramPercent), swapPercent, getUsageColor(swapPercent))"
-        >
-          <span class="metric-ring-track"></span>
-          <span class="metric-ring-progress"></span>
-          <template v-if="hasSwapData">
-            <span class="metric-ring-swap-track"></span>
-            <span class="metric-ring-swap-progress"></span>
-          </template>
-          <span class="metric-ring-center" :class="{ 'metric-ring-center-memory': hasSwapData }">
-            <span>{{ roundedPercent(ramPercent) }}%</span>
-            <span v-if="hasSwapData" class="metric-ring-center-swap">{{ roundedPercent(swapPercent) }}%</span>
-          </span>
-        </div>
-        <div class="metric-ring-label">RAM</div>
-        <div class="metric-ring-subtext">{{ ramUsageText }}</div>
-      </div>
-
-      <div class="metric-ring-item">
-        <div class="metric-ring-chart" :style="getRingStyle(diskPercent, getUsageColor(diskPercent))">
-          <span class="metric-ring-track"></span>
-          <span class="metric-ring-progress"></span>
-          <span class="metric-ring-center">{{ roundedPercent(diskPercent) }}%</span>
-        </div>
-        <div class="metric-ring-label">Disk</div>
-        <div class="metric-ring-subtext">{{ diskUsageText }}</div>
-      </div>
+      <GaugeRing :value="isOnline ? cpuPercent : null" label="CPU" :subtitle="`${cpuCores} ${trans.publicCores}`" />
+      <GaugeRing :value="isOnline ? ramPercent : null" :label="trans.ram" :subtitle="ramUsageText" :secondary="hasSwapData && isOnline ? swapPercent : null" />
+      <GaugeRing :value="isOnline ? diskPercent : null" :label="trans.disk" :subtitle="diskUsageText" :warning="80" :critical="92" />
     </div>
 
     <div class="server-card-network-panel">
@@ -108,8 +72,8 @@
           <span>{{ trafficLimitText }}<template v-if="trafficLimitSummary"> | {{ trafficLimitPercentText }}%</template></span>
         </div>
         <div class="server-card-limit-bar">
-          <div v-if="trafficLimitSummary" class="server-card-limit-fill" :style="{ width: Math.min(100, trafficUsagePercent) + '%', background: getUsageColor(trafficUsagePercent) }"></div>
-          <div v-else class="server-card-limit-fill" style="background-image: linear-gradient(to right, #00d4aa, #4da6ff, #ffb870, #f85149);">></div>
+          <div v-if="trafficLimitSummary" class="server-card-limit-fill" :style="{ transform: `scaleX(${(Math.min(100, trafficUsagePercent)) / 100})`, background: getUsageColor(trafficUsagePercent) }"></div>
+          <div v-else class="server-card-limit-fill" style="background-image: linear-gradient(to right, #00d4aa, #4da6ff, #ffb870, #f85149);"></div>
         </div>
       </div>
       <ServerLatencyPanel
@@ -131,6 +95,8 @@
 </template>
 
 <script setup>
+import GaugeRing from './GaugeRing.vue'
+import AppIcon from './AppIcon.vue'
 import OsIcon from './OsIcon.vue'
 import ServerLatencyPanel from './ServerLatencyPanel.vue'
 import { DEFAULT_SERVER_CARD_CONFIG, useServerCardData } from '../composables/useServerCardData'
@@ -154,6 +120,7 @@ const {
   trans,
   regionCode,
   statusColor,
+  isOnline,
   statusText,
   cpuPercent,
   cpuCores,

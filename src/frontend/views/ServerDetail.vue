@@ -1,14 +1,14 @@
 <template>
-  <div class="container">
-    <TerminalHeader :title="server.name || 'Loading...'" />
-    
+  <div class="container public-app public-detail">
+    <TerminalHeader :title="config?.site_title || appConfig?.site_title || DEFAULT_SITE_TITLE" />
+
     <div v-if="loading" class="loading-state">
       <div class="loading-spinner"></div>
-      <div class="loading-text">$ {{ trans.loading }}</div>
+      <div class="loading-text">{{ trans.loading }}</div>
     </div>
 
     <template v-else>
-    
+
     <div class="nav-bar">
       <router-link to="/" class="back-btn">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -16,84 +16,78 @@
         </svg>
         {{ trans.back }}
       </router-link>
-      <div class="time-selector" v-show="historyLoaded" id="time-selector">
-        <button 
-          v-for="option in timeOptions" 
-          :key="option.hours"
-          class="time-btn"
-          :class="{ active: currentHours === option.hours }"
-          @click="setTimeRange(option.hours)"
-        >{{ option.label }}</button>
-      </div>
+
     </div>
 
     <div class="host-card">
       <div class="host-card-header">
         <div class="host-name">
-          <span class="prompt">root@</span>
+
           <span v-if="server.region && server.region !== 'xx'" class="country-os-icons">
             <img :src="getPublicAssetUrl('flags/' + getFlagRegionCode(server.region) + '.svg')" :alt="server.region" class="flag-img">
             <OsIcon :os="server.os" />
           </span>
           <span v-else class="country-os-icons">
-            <span class="flag-fallback">🏳️</span>
+            <span class="flag-fallback"><AppIcon name="globe" :size="20" /></span>
             <OsIcon :os="server.os" />
           </span>
-          <span>{{ server.name || 'Loading...' }}</span>
-          <span style="color: var(--text-muted);">:~#</span>
+          <span>{{ server.name || trans.loading }}</span>
+
         </div>
         <span class="status-badge" :class="{ online: isOnline, offline: !isOnline }">
           <span class="pulse-dot" :class="{ online: isOnline, offline: !isOnline }"></span>
           <span>{{ isOnline ? trans.online : trans.offline }}</span>
         </span>
       </div>
+      <div class="public-detail-gauges"><GaugeRing :value="isOnline ? Number(cpuPercent) : null" label="CPU" :subtitle="`${server.cpu_cores || '—'} ${trans.publicCores}`" /><GaugeRing :value="isOnline ? Number(ramPercent) : null" :label="trans.ram" :subtitle="`${formatBytes(server.ram_used * 1024 * 1024)} / ${formatBytes(server.ram_total * 1024 * 1024)}`" /><GaugeRing :value="isOnline ? Number(diskPercent) : null" :label="trans.disk" :subtitle="`${formatBytes(server.disk_used * 1024 * 1024)} / ${formatBytes(server.disk_total * 1024 * 1024)}`" :warning="80" :critical="92" /><GaugeRing :value="isOnline && Number(server.swap_total) > 0 ? Number(server.swap_used || 0) / Number(server.swap_total) * 100 : null" label="Swap" :subtitle="`${formatBytes(server.swap_used * 1024 * 1024)} / ${formatBytes(server.swap_total * 1024 * 1024)}`" /></div>
+      <details class="public-system-info"><summary>{{ trans.basicInfo }}<AppIcon name="chevron-down" :size="16" /></summary>
       <div class="sysinfo-grid" id="info-panel">
         <div class="sysinfo-item">
-          <span class="sysinfo-label">⏱ {{ trans.uptime }}</span>
+          <span class="sysinfo-label"><AppIcon name="clock" :size="14" /> {{ trans.uptime }}</span>
           <span class="sysinfo-value">{{ formatUptime(server.boot_time) }}</span>
         </div>
         <div class="sysinfo-item" v-if="server.expire_date">
-          <span class="sysinfo-label">📅 {{ trans.expire }}</span>
+          <span class="sysinfo-label"><AppIcon name="calendar" :size="14" /> {{ trans.expire }}</span>
           <span class="sysinfo-value" :class="{ 'expired': isExpired }">{{ expireDaysText }}</span>
         </div>
         <div class="sysinfo-item">
-          <span class="sysinfo-label">💻 {{ trans.os }} / {{ trans.architecture }}</span>
+          <span class="sysinfo-label"><AppIcon name="monitor" :size="14" /> {{ trans.os }} / {{ trans.architecture }}</span>
           <span class="sysinfo-value sysinfo-small">{{ server.os || 'N/A' }} / {{ server.arch || 'N/A' }}</span>
         </div>
         <div class="sysinfo-item" v-if="server.kernel_version">
-          <span class="sysinfo-label">🧩 {{ trans.kernelVersion || 'Kernel' }}</span>
+          <span class="sysinfo-label"><AppIcon name="layers" :size="14" /> {{ trans.kernelVersion || 'Kernel' }}</span>
           <span class="sysinfo-value sysinfo-small">{{ server.kernel_version }}</span>
         </div>
         <div class="sysinfo-item">
-          <span class="sysinfo-label">🔧 {{ trans.cpuInfo }}</span>
+          <span class="sysinfo-label"><AppIcon name="cpu" :size="14" /> {{ trans.cpuInfo }}</span>
           <span class="sysinfo-value sysinfo-small">{{ server.cpu_info || 'N/A' }} x {{ server.cpu_cores || 'N/A' }}</span>
         </div>
         <div class="sysinfo-item" v-if="hasGpuData">
-          <span class="sysinfo-label">🎮 {{ trans.gpuInfo || 'GPU Info' }}</span>
+          <span class="sysinfo-label"><AppIcon name="cpu" :size="14" /> {{ trans.gpuInfo || 'GPU Info' }}</span>
           <span class="sysinfo-value sysinfo-small">{{ gpuInfoText }}</span>
         </div>
         <div class="sysinfo-item">
-          <span class="sysinfo-label">💾 {{ trans.totalDiskRam }}</span>
+          <span class="sysinfo-label"><AppIcon name="disk" :size="14" /> {{ trans.totalDiskRam }}</span>
           <span class="sysinfo-value">{{ formatBytes(server.disk_total*1024*1024) }} / {{ formatBytes(server.ram_total*1024*1024) }}</span>
         </div>
         <div class="sysinfo-item">
-          <span class="sysinfo-label">📊 {{ trans.loadAvg }}</span>
+          <span class="sysinfo-label"><AppIcon name="activity" :size="14" /> {{ trans.loadAvg }}</span>
           <span class="sysinfo-value highlight">{{ server.load_avg || '0.00 0.00 0.00' }}</span>
         </div>
         <div class="sysinfo-item">
-          <span class="sysinfo-label">🌐 {{ trans.totalTraffic }}</span>
+          <span class="sysinfo-label"><AppIcon name="network" :size="14" /> {{ trans.totalTraffic }}</span>
           <span class="sysinfo-value sysinfo-small">↓ {{ formatBytes(server.net_rx) }} / ↑ {{ formatBytes(server.net_tx) }}</span>
         </div>
         <div class="sysinfo-item">
-          <span class="sysinfo-label">⚡ {{ trans.realtimeSpeed }}</span>
+          <span class="sysinfo-label"><AppIcon name="zap" :size="14" /> {{ trans.realtimeSpeed }}</span>
           <span class="sysinfo-value sysinfo-small">↓ {{ formatBytes(server.net_in_speed) }}/s / ↑ {{ formatBytes(server.net_out_speed) }}/s</span>
         </div>
         <div class="sysinfo-item" v-if="server.net_rx_monthly">
-          <span class="sysinfo-label">📊 {{ trans.monthlyTraffic }}</span>
+          <span class="sysinfo-label"><AppIcon name="activity" :size="14" /> {{ trans.monthlyTraffic }}</span>
           <span class="sysinfo-value sysinfo-small">↓ {{ formatBytes(server.net_rx_monthly) }} / ↑ {{ formatBytes(server.net_tx_monthly) }}</span>
         </div>
         <div class="sysinfo-item" v-if="server.net_rx_monthly">
-          <span class="sysinfo-label">📦 {{ trans.monthlyTrafficLimit }}</span>
+          <span class="sysinfo-label"><AppIcon name="network" :size="14" /> {{ trans.monthlyTrafficLimit }}</span>
           <span class="sysinfo-value sysinfo-small">
             {{ formatBytes(trafficUsageBytes) }}
             /
@@ -101,21 +95,32 @@
           </span>
         </div>
         <div class="sysinfo-item">
-          <span class="sysinfo-label">🕐 {{ trans.bootTime }}</span>
+          <span class="sysinfo-label"><AppIcon name="clock" :size="14" /> {{ trans.bootTime }}</span>
           <span class="sysinfo-value sysinfo-small">{{ formatTimestamp(server.boot_time) }}</span>
         </div>
         <div class="sysinfo-item">
-          <span class="sysinfo-label">⏰ {{ trans.lastUpdate }}</span>
+          <span class="sysinfo-label"><AppIcon name="clock" :size="14" /> {{ trans.lastUpdate }}</span>
           <span class="sysinfo-value sysinfo-small">{{ lastUpdateText }}</span>
         </div>
       </div>
+      </details>
     </div>
 
+    <div class="public-detail-toolbar"><div class="public-status-filters" role="group" :aria-label="trans.publicCharts"><button v-for="tab in chartSections" :key="tab.value" :class="{ active: chartSection === tab.value }" :aria-pressed="chartSection === tab.value" @click="setChartSection(tab.value)">{{ tab.label }}</button></div>
+      <div class="time-selector" v-show="historyLoaded" id="time-selector">
+        <button
+          v-for="option in timeOptions"
+          :key="option.hours"
+          class="time-btn"
+          :class="{ active: currentHours === option.hours }"
+          @click="setTimeRange(option.hours)"
+        >{{ option.label }}</button>
+      </div>    </div>
     <div class="charts-container">
-      <div class="chart-card" :class="{ 'full-width': isChartExpanded('cpu') }">
+      <div class="chart-card" :class="{ 'full-width': isChartExpanded('cpu') }" v-show="chartSection === 'all' || chartSection === 'resources'">
         <div class="chart-card-header">
           <span class="chart-title">
-            <span class="chart-title-icon">▸</span>
+            <AppIcon name="activity" :size="16" />
             {{ trans.cpuUsage }}
           </span>
           <div class="chart-header-actions">
@@ -128,10 +133,10 @@
         </div>
       </div>
 
-      <div class="chart-card" :class="{ 'full-width': isChartExpanded('ram') }">
+      <div class="chart-card" :class="{ 'full-width': isChartExpanded('ram') }" v-show="chartSection === 'all' || chartSection === 'resources'">
         <div class="chart-card-header">
           <span class="chart-title">
-            <span class="chart-title-icon">▸</span>
+            <AppIcon name="activity" :size="16" />
             {{ trans.memoryUsage }}
           </span>
           <div class="chart-header-actions">
@@ -147,10 +152,10 @@
         </div>
       </div>
 
-      <div class="chart-card" :class="{ 'full-width': isChartExpanded('net') }">
+      <div class="chart-card" :class="{ 'full-width': isChartExpanded('net') }" v-show="chartSection === 'all' || chartSection === 'network'">
         <div class="chart-card-header">
           <span class="chart-title">
-            <span class="chart-title-icon">▸</span>
+            <AppIcon name="activity" :size="16" />
             {{ trans.networkTraffic }}
           </span>
           <div class="chart-header-actions">
@@ -166,10 +171,10 @@
         </div>
       </div>
 
-      <div class="chart-card" :class="{ 'full-width': isChartExpanded('load') }">
+      <div class="chart-card" :class="{ 'full-width': isChartExpanded('load') }" v-show="chartSection === 'all' || chartSection === 'resources'">
         <div class="chart-card-header">
           <span class="chart-title">
-            <span class="chart-title-icon">▸</span>
+            <AppIcon name="activity" :size="16" />
             {{ trans.loadAvgMonitor }}
           </span>
           <div class="chart-header-actions">
@@ -186,10 +191,10 @@
         </div>
       </div>
 
-      <div class="chart-card" :class="{ 'full-width': isChartExpanded('disk') }">
+      <div class="chart-card" :class="{ 'full-width': isChartExpanded('disk') }" v-show="chartSection === 'all' || chartSection === 'resources'">
         <div class="chart-card-header">
           <span class="chart-title">
-            <span class="chart-title-icon">▸</span>
+            <AppIcon name="activity" :size="16" />
             {{ trans.diskUsage }}
           </span>
           <div class="chart-header-actions">
@@ -205,10 +210,10 @@
         </div>
       </div>
 
-      <div class="chart-card" :class="{ 'full-width': isChartExpanded('diskIo') }" v-show="hasDiskIoData">
+      <div class="chart-card" :class="{ 'full-width': isChartExpanded('diskIo') }" v-show="(chartSection === 'all' || chartSection === 'resources') && hasDiskIoData">
         <div class="chart-card-header disk-io-header">
           <span class="chart-title">
-            <span class="chart-title-icon">▸</span>
+            <AppIcon name="activity" :size="16" />
             {{ trans.diskIo || 'Disk IO' }}
           </span>
           <div class="chart-header-actions">
@@ -227,10 +232,10 @@
         </div>
       </div>
 
-      <div class="chart-card" :class="{ 'full-width': isChartExpanded('gpu') }" v-show="hasGpuData">
+      <div class="chart-card" :class="{ 'full-width': isChartExpanded('gpu') }" v-show="(chartSection === 'all' || chartSection === 'resources') && hasGpuData">
         <div class="chart-card-header">
           <span class="chart-title">
-            <span class="chart-title-icon">▸</span>
+            <AppIcon name="activity" :size="16" />
             {{ trans.gpuUsage || 'GPU Usage' }}
           </span>
           <div class="chart-header-actions">
@@ -243,10 +248,10 @@
         </div>
       </div>
 
-      <div class="chart-card" :class="{ 'full-width': isChartExpanded('gpuMem') }" v-show="hasGpuMemData">
+      <div class="chart-card" :class="{ 'full-width': isChartExpanded('gpuMem') }" v-show="(chartSection === 'all' || chartSection === 'resources') && hasGpuMemData">
         <div class="chart-card-header">
           <span class="chart-title">
-            <span class="chart-title-icon">▸</span>
+            <AppIcon name="activity" :size="16" />
             {{ trans.gpuMemory || 'GPU Memory' }}
           </span>
           <div class="chart-header-actions">
@@ -259,10 +264,10 @@
         </div>
       </div>
 
-      <div class="chart-card" :class="{ 'full-width': isChartExpanded('gpuClock') }" v-show="hasGpuClockData">
+      <div class="chart-card" :class="{ 'full-width': isChartExpanded('gpuClock') }" v-show="(chartSection === 'all' || chartSection === 'resources') && hasGpuClockData">
         <div class="chart-card-header">
           <span class="chart-title">
-            <span class="chart-title-icon">▸</span>
+            <AppIcon name="activity" :size="16" />
             {{ trans.gpuClock || 'GPU SM Clock' }}
           </span>
           <div class="chart-header-actions">
@@ -275,10 +280,10 @@
         </div>
       </div>
 
-      <div class="chart-card" :class="{ 'full-width': isChartExpanded('gpuPower') }" v-show="hasGpuPowerData">
+      <div class="chart-card" :class="{ 'full-width': isChartExpanded('gpuPower') }" v-show="(chartSection === 'all' || chartSection === 'resources') && hasGpuPowerData">
         <div class="chart-card-header">
           <span class="chart-title">
-            <span class="chart-title-icon">▸</span>
+            <AppIcon name="activity" :size="16" />
             {{ trans.gpuPower || 'GPU Power' }}
           </span>
           <div class="chart-header-actions">
@@ -291,10 +296,10 @@
         </div>
       </div>
 
-      <div class="chart-card" :class="{ 'full-width': isChartExpanded('proc') }">
+      <div class="chart-card" :class="{ 'full-width': isChartExpanded('proc') }" v-show="chartSection === 'all' || chartSection === 'resources'">
         <div class="chart-card-header">
           <span class="chart-title">
-            <span class="chart-title-icon">▸</span>
+            <AppIcon name="activity" :size="16" />
             {{ trans.processes }}
           </span>
           <div class="chart-header-actions">
@@ -307,10 +312,10 @@
         </div>
       </div>
 
-      <div class="chart-card" :class="{ 'full-width': isChartExpanded('conn') }">
+      <div class="chart-card" :class="{ 'full-width': isChartExpanded('conn') }" v-show="chartSection === 'all' || chartSection === 'network'">
         <div class="chart-card-header">
           <span class="chart-title">
-            <span class="chart-title-icon">▸</span>
+            <AppIcon name="activity" :size="16" />
             {{ trans.connections }}
           </span>
           <div class="chart-header-actions">
@@ -326,10 +331,10 @@
         </div>
       </div>
 
-      <div class="chart-card" :class="{ 'full-width': isChartExpanded('ping') }" v-show="hasPingData">
+      <div class="chart-card" :class="{ 'full-width': isChartExpanded('ping') }" v-show="(chartSection === 'all' || chartSection === 'network') && hasPingData">
         <div class="chart-card-header">
           <span class="chart-title">
-            <span class="chart-title-icon">▸</span>
+            <AppIcon name="activity" :size="16" />
             {{ trans.latencyMonitor }}
           </span>
           <div class="chart-header-actions">
@@ -346,10 +351,10 @@
         </div>
       </div>
 
-      <div class="chart-card" :class="{ 'full-width': isChartExpanded('loss') }" v-show="hasLossData">
+      <div class="chart-card" :class="{ 'full-width': isChartExpanded('loss') }" v-show="(chartSection === 'all' || chartSection === 'network') && hasLossData">
         <div class="chart-card-header">
           <span class="chart-title">
-            <span class="chart-title-icon">▸</span>
+            <AppIcon name="activity" :size="16" />
             {{ trans.packetLoss || 'Packet Loss' }}
           </span>
           <div class="chart-header-actions">
@@ -373,8 +378,8 @@
     <div id="loginRequiredModal" class="modal-overlay" :class="{ active: showLoginModal }">
       <div class="modal-dialog">
         <div class="modal-header">
-          <div class="modal-title">$ sudo login</div>
-          <button class="modal-close" @click="showLoginModal = false">✕</button>
+          <div class="modal-title">{{ trans.login }}</div>
+          <button class="modal-close" @click="showLoginModal = false" :aria-label="trans.close"><AppIcon name="x" :size="17" /></button>
         </div>
         <div class="modal-body-content">
           <p class="modal-body-text">{{ trans.loginRequired }}</p>
@@ -398,6 +403,10 @@
 <script setup>
 import { ref, computed, inject, onMounted, onUnmounted, watch, nextTick, h } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import AppIcon from '../components/AppIcon.vue'
+import GaugeRing from '../components/GaugeRing.vue'
+import { useDialogs } from '../composables/useDialogs'
+useDialogs('.public-app')
 import TerminalHeader from '../components/TerminalHeader.vue'
 import Footer from '../components/Footer.vue'
 import OsIcon from '../components/OsIcon.vue'
@@ -408,8 +417,9 @@ import { getTrafficUsageBytes } from '../composables/useServerCardData'
 import { getPublicAssetUrl } from '../utils/config.js'
 import Chart from 'chart.js/auto'
 import { t, useTranslation } from '../utils/i18n'
-import { CHART, HISTORY } from '../utils/constants'
+import { CHART, HISTORY, DEFAULT_SITE_TITLE } from '../utils/constants'
 import { formatDateTime, normalizeTimestamp as normalizeMetricTimestamp } from '../utils/time.js'
+import { buildReplayStatusData } from '../utils/replayStatus.js'
 import useTheme from '../composables/useTheme'
 import { isDisabledProbeMetric } from '../utils/server.js'
 import { resolvePlaybackCursor } from '../utils/playback.js'
@@ -448,6 +458,10 @@ const frontendWsTimeoutMinutes = ref(0)
 const loading = ref(true)
 
 const trans = useTranslation()
+const chartSection = ref(['resources', 'network', 'all'].includes(route.query.section) ? route.query.section : 'resources')
+const chartSections = computed(() => [{ value: 'resources', label: trans.value.publicResources }, { value: 'network', label: trans.value.networkTraffic }, { value: 'all', label: trans.value.all }])
+const setChartSection = section => { chartSection.value = section; router.replace({ query: { ...route.query, section } }) }
+
 
 const ChartExpandButton = {
   props: {
@@ -817,7 +831,7 @@ const formatPing = (value) => (value === null || value === undefined || value ==
 
 const parseBootTimeToMs = (bootTime) => {
   if (!bootTime) return null
-  
+
   if (typeof bootTime === 'string' && !/^\d+$/.test(bootTime)) {
     const date = new Date(bootTime)
     if (isNaN(date.getTime())) return null
@@ -835,19 +849,19 @@ const parseBootTimeToMs = (bootTime) => {
 const formatUptime = (bootTime) => {
   const bootTimeMs = parseBootTimeToMs(bootTime)
   if (!bootTimeMs) return 'N/A'
-  
+
   const diffMs = Date.now() - bootTimeMs
-  
+
   if (diffMs < 0) return 'N/A'
-  
+
   const seconds = Math.floor(diffMs / 1000)
   const days = Math.floor(seconds / 86400)
   const hours = Math.floor((seconds % 86400) / 3600)
   const minutes = Math.floor((seconds % 3600) / 60)
-  
+
   const hoursStr = String(hours).padStart(2, '0')
   const minutesStr = String(minutes).padStart(2, '0')
-  
+
   if (days > 0) {
     return `${days}${days === 1 ? trans.value.day : trans.value.days}, ${hoursStr}:${minutesStr}`
   } else {
@@ -961,7 +975,7 @@ const CHART_DEFS = [
         grid: { color: chartTheme.grid, drawBorder: false, drawOnChartArea: false, tickLength: 0 },
         ticks: {
           color: chartTheme.axis,
-          font: { size: 9, family: "'JetBrains Mono', monospace" },
+          font: { size: 9, family: 'Inter, Segoe UI, sans-serif' },
           padding: 8,
           callback: formatDiskIoAxisTick
         }
@@ -1047,23 +1061,28 @@ const getChartThemeColors = () => ({
   tooltipBorder: getCssVar('--border-color', '#1e2a3a')
 })
 
+const getChartTickLimit = (width, hours = currentHours.value) => {
+  const limit = hours <= 3 ? CHART.MAX_TICKS : CHART.MAX_TICKS_HOUR
+  return width < 500 ? Math.min(4, limit) : limit
+}
+
 const initCharts = () => {
   safeDestroyCharts()
 
   const chartTheme = getChartThemeColors()
 
-  Chart.defaults.font.family = "'JetBrains Mono', 'Courier New', monospace"
-  Chart.defaults.font.size = 10
+  Chart.defaults.font.family = 'Inter, -apple-system, BlinkMacSystemFont, Segoe UI, Microsoft YaHei, sans-serif'
+  Chart.defaults.font.size = 11
   Chart.defaults.color = chartTheme.axis
   Chart.defaults.plugins.tooltip.backgroundColor = chartTheme.tooltipBg
   Chart.defaults.plugins.tooltip.titleColor = chartTheme.tooltipTitle
   Chart.defaults.plugins.tooltip.bodyColor = chartTheme.tooltipBody
   Chart.defaults.plugins.tooltip.borderColor = chartTheme.tooltipBorder
   Chart.defaults.plugins.tooltip.borderWidth = 1
-  Chart.defaults.plugins.tooltip.titleFont = { size: 12, weight: 'bold', family: "'JetBrains Mono', monospace" }
-  Chart.defaults.plugins.tooltip.bodyFont = { size: 11, family: "'JetBrains Mono', monospace" }
+  Chart.defaults.plugins.tooltip.titleFont = { size: 12, weight: 'bold', family: 'Inter, Segoe UI, sans-serif' }
+  Chart.defaults.plugins.tooltip.bodyFont = { size: 11, family: 'Inter, Segoe UI, sans-serif' }
   Chart.defaults.plugins.tooltip.padding = 12
-  Chart.defaults.plugins.tooltip.cornerRadius = 2
+  Chart.defaults.plugins.tooltip.cornerRadius = 9
 
   const createChartOptions = (unit = '', showLegend = false, formatCallback = null, tickFormat = null, extraScales = null) => {
     const resolvedExtraScales = typeof extraScales === 'function'
@@ -1073,7 +1092,10 @@ const initCharts = () => {
     return {
       responsive: true,
       maintainAspectRatio: false,
-      animation: { duration: CHART.ANIMATION_DURATION, easing: 'easeOutCubic' },
+      animation: { duration: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : CHART.ANIMATION_DURATION, easing: 'easeOutCubic' },
+      onResize: (chart, size) => {
+        chart.options.scales.x.ticks.maxTicksLimit = getChartTickLimit(size.width)
+      },
       interaction: { mode: 'index', intersect: false },
       plugins: {
         legend: {
@@ -1082,7 +1104,7 @@ const initCharts = () => {
           labels: {
             boxWidth: 10,
             padding: 12,
-            font: { size: 10, family: "'JetBrains Mono', monospace" },
+            font: { size: 10, family: 'Inter, Segoe UI, sans-serif' },
             usePointStyle: true,
             color: chartTheme.axis,
             filter: (legendItem, chartData) => {
@@ -1124,7 +1146,7 @@ const initCharts = () => {
                 label += typeof value === 'number' ? value.toFixed(2) : value
                 label += unit
               }
-              return '$ ' + label
+              return label
             }
           }
         }
@@ -1136,12 +1158,12 @@ const initCharts = () => {
             display: false,
             text: '',
             color: chartTheme.axis,
-            font: { size: 10, family: "'JetBrains Mono', monospace" }
+            font: { size: 10, family: 'Inter, Segoe UI, sans-serif' }
           },
           ticks: {
-            maxTicksLimit: CHART.MAX_TICKS,
+            maxTicksLimit: getChartTickLimit(window.innerWidth),
             color: chartTheme.axis,
-            font: { size: 9, family: "'JetBrains Mono', monospace" },
+            font: { size: 11, family: 'Inter, Segoe UI, sans-serif' },
             maxRotation: 0,
             padding: 8,
             callback: function(value) {
@@ -1155,7 +1177,7 @@ const initCharts = () => {
           grid: { color: chartTheme.grid, drawBorder: false, tickLength: 0 },
           ticks: {
             color: chartTheme.axis,
-            font: { size: 9, family: "'JetBrains Mono', monospace" },
+            font: { size: 11, family: 'Inter, Segoe UI, sans-serif' },
             padding: 8,
             callback: tickFormat || function(value) { return value + unit; }
           }
@@ -1241,7 +1263,7 @@ const shouldBreakGap = (prevPoint, nextPoint) => {
 
 const applyGapBreak = (data) => {
   if (!data || data.length < 2) return data
-  
+
   const result = []
   for (let i = 0; i < data.length; i++) {
     result.push(data[i])
@@ -1325,8 +1347,8 @@ const updateLoadChart = (chart, dataPoints) => {
     processedData = dataPoints.map(d => {
       const loadVal = d.load_avg || '0 0 0'
       const loads = parseLoadAvg(loadVal)
-      return { 
-        x: new Date(d.timestamp).getTime(), 
+      return {
+        x: new Date(d.timestamp).getTime(),
         load1: loads[0],
         load5: loads[1],
         load15: loads[2]
@@ -1339,7 +1361,7 @@ const updateLoadChart = (chart, dataPoints) => {
   const load1Data = processedData.map(d => createChartPoint(d.x, d.load1))
   const load5Data = processedData.map(d => createChartPoint(d.x, d.load5))
   const load15Data = processedData.map(d => createChartPoint(d.x, d.load15))
-  
+
   chart.data.datasets[0].data = applyGapBreak(load1Data)
   chart.data.datasets[1].data = applyGapBreak(load5Data)
   chart.data.datasets[2].data = applyGapBreak(load15Data)
@@ -1477,11 +1499,9 @@ const loadAllHistory = async (hours) => {
 }
 
 const updateAllChartTimeUnits = (hours) => {
-  const maxTicks = hours <= 3 ? CHART.MAX_TICKS : CHART.MAX_TICKS_HOUR
-
   Object.values(charts).forEach(chart => {
     if (chart?.options?.scales?.x) {
-      chart.options.scales.x.ticks.maxTicksLimit = maxTicks
+      chart.options.scales.x.ticks.maxTicksLimit = getChartTickLimit(chart.width, hours)
       delete chart.options.scales.x.min
       delete chart.options.scales.x.max
     }
@@ -1494,10 +1514,10 @@ const updateAllChartTimeUnits = (hours) => {
 
 const appendDataToChart = (chart, datasetIndex, timestamp, value, isPing = false, emptyAsNull = false) => {
   if (!chart) return
-  
+
   const dataset = chart.data.datasets[datasetIndex]
   if (!dataset) return
-  
+
   const time = new Date(timestamp).getTime()
   const lastTime = getLastDatasetTimestamp(dataset.data)
   if (lastTime && time <= lastTime) return
@@ -1513,16 +1533,16 @@ const appendDataToChart = (chart, datasetIndex, timestamp, value, isPing = false
   } else {
     yVal = parseFloat(value) || 0
   }
-  
+
   dataset.data = appendPointWithGapBreak(dataset.data, createChartPoint(time, yVal))
-  
+
   while (dataset.data.length > CHART.MAX_DATA_POINTS) {
     dataset.data.shift()
   }
-  
+
   dataset.data = dataset.data.filter(d => getChartTimestamp(d) >= startTime)
   syncChartLabels(chart)
-  
+
   chart.update('none')
 }
 
@@ -1531,7 +1551,7 @@ const REALTIME_SAMPLE_FIELDS = new Set([
   'cpu', 'ram_total', 'ram_used', 'swap_total', 'swap_used',
   'net_in_speed', 'net_out_speed', 'disk'
 ])
-const TIMING_FIELDS = new Set(['last_updated', 'sample_timestamp'])
+const TIMING_FIELDS = new Set(['last_updated', 'sample_timestamp', 'report_timestamp'])
 
 const appendLoadChartData = (timestamp, loadAvg) => {
   const chart = charts.load
@@ -1570,21 +1590,7 @@ const getReplaySampleData = (sample) => {
   return sample.data || sample.payload || sample.metrics || null
 }
 
-const buildLiveStatusData = (event) => {
-  const receiveTs = Date.now()
-  // last_updated 必须使用上报方的时间戳，不能用浏览器接收时间，
-  // 否则离线重放缓存上报时会把「最后更新」显示成当前时间。
-  const reportTs = normalizeMetricTimestamp(
-    event?.data?.last_updated ?? event?.data?.timestamp ?? event?.ts,
-    receiveTs
-  )
-  return {
-    ...event.data,
-    sample_timestamp: reportTs,
-    last_updated: reportTs,
-    timestamp: receiveTs
-  }
-}
+const buildLiveStatusData = buildReplayStatusData
 
 const scheduleLatestReportReplay = (event, delay) => {
   const timer = setTimeout(() => {
@@ -1608,7 +1614,7 @@ const toReplayEvents = (update, messageTs = Date.now()) => {
         sample.ts ?? sample.timestamp ?? data.sample_timestamp ?? data.last_updated ?? data.timestamp ?? update.ts ?? messageTs,
         null
       )
-      return ts ? { ts, data } : null
+      return ts ? { ts, data, reportTs: normalizeMetricTimestamp(update.reportTs ?? update.report_timestamp, messageTs) } : null
     })
     .filter(Boolean)
     .sort((a, b) => a.ts - b.ts)
@@ -1772,20 +1778,20 @@ const fetchCurrentStatus = async (incomingData, options = {}) => {
       server.value = newServer
     } else {
       config.value = data.sysConfig || null
-      server.value = data
+      server.value = { ...data, report_timestamp: normalizeMetricTimestamp(data.report_timestamp ?? data.last_updated) }
       markDiskIoDataAvailable(data)
       loading.value = false
     }
     syncProbeChartVisibility()
 
     if (data.last_updated && chartsReady.value && isRealtimeHistoryRange()) {
-      const dataTimestamp = new Date(data.last_updated).getTime()
+      const dataTimestamp = normalizeMetricTimestamp(data.sample_timestamp ?? data.last_updated)
       if (chartMode === 'sample' || chartMode === 'all') appendRealtimeSampleCharts(data, dataTimestamp)
       if (chartMode === 'report' || chartMode === 'all') appendReportChartsThrottled(data, dataTimestamp)
     }
 
     if (data.last_updated) {
-      lastUpdateText.value = formatTimestamp(data.last_updated)
+      lastUpdateText.value = formatTimestamp(server.value.report_timestamp ?? server.value.last_updated)
     }
     return data
   } catch (e) {
@@ -1820,10 +1826,10 @@ const initChartsOnMount = async () => {
   isInitializingCharts = true
 
   await nextTick()
-  
+
   const allRefsReady = cpuChartRef.value && gpuChartRef.value && gpuMemChartRef.value && gpuClockChartRef.value && gpuPowerChartRef.value && ramChartRef.value && diskChartRef.value && diskIoChartRef.value &&
     netChartRef.value && procChartRef.value && connChartRef.value && pingChartRef.value && lossChartRef.value && loadChartRef.value
-  
+
   if (allRefsReady) {
     try {
       initCharts()

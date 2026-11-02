@@ -1,11 +1,11 @@
 <template>
   <div id="tab-theme-store" class="tab-content" :class="{ active: activeTab === 'themeStore' }">
     <div class="settings-section">
-      <div class="section-title"><span>▸</span> {{ trans.themeStore }}</div>
+      <div class="section-title">{{ trans.themeStore }}</div>
 
       <div class="warning-box mb-4">
         <div class="flex-center-gap-sm">
-          <span class="warning-icon text-xl">⚠️</span>
+          <span class="warning-icon text-xl"><AdminIcon name="alert" :size="16" /></span>
           <span style="color: var(--accent-yellow); font-weight: 600;">{{ trans.themeStoreWarning }}</span>
         </div>
         <p class="text-secondary text-sm mt-2" style="line-height: 1.6;">{{ trans.themeStoreWarningDesc }}</p>
@@ -37,32 +37,32 @@
             @click="previewCustomTheme"
             class="btn"
             :disabled="!customThemeUrl || previewingThemeId === '__custom__'"
-          >👁 {{ previewingThemeId === '__custom__' ? trans.saving : trans.preview }}</button>
+          ><AdminIcon name="eye" :size="16" /> {{ previewingThemeId === '__custom__' ? trans.saving : trans.preview }}</button>
           <button
             @click="applyCustomTheme"
             class="btn btn-primary"
             :disabled="!customThemeUrl || applyingThemeId === '__custom__'"
-          >⇄ {{ applyingThemeId === '__custom__' ? trans.saving : trans.applyCustomTheme }}</button>
+          ><AdminIcon name="refresh" :size="16" /> {{ applyingThemeId === '__custom__' ? trans.saving : trans.applyCustomTheme }}</button>
           <button
             v-if="currentThemeUrl"
             @click="clearTheme"
             class="btn"
             :disabled="applyingThemeId === '__builtin__'"
-          >↩ {{ trans.useBuiltinTheme }}</button>
+          ><AdminIcon name="reset" :size="16" /> {{ trans.useBuiltinTheme }}</button>
         </div>
       </div>
 
       <div v-if="loading" class="theme-loading">
         <div class="loading-spinner"></div>
-        <div class="loading-text">$ {{ trans.themeStoreLoading }}...</div>
+        <div class="loading-text">{{ trans.themeStoreLoading }}</div>
       </div>
 
       <div v-else-if="error" class="danger-box mb-4">
         <div class="flex-center-gap-sm">
-          <span class="danger-icon text-xl">❌</span>
+          <span class="danger-icon text-xl"><AdminIcon name="error" :size="16" /></span>
           <span class="danger-label">{{ error }}</span>
         </div>
-        <button @click="loadThemes" class="btn btn-lg mt-2">↻ {{ trans.refresh }}</button>
+        <button @click="loadThemes" class="btn btn-lg mt-2"><AdminIcon name="refresh" :size="16" />{{ trans.refresh }}</button>
       </div>
 
       <div class="theme-grid">
@@ -86,14 +86,14 @@
                 class="btn btn-sm"
                 :class="{ 'btn-primary': applyingThemeId !== '__mikus_enable__' && !isMikusThemeActive }"
                 :disabled="applyingThemeId === '__mikus_enable__' || isMikusThemeActive"
-              >✓ {{ applyingThemeId === '__mikus_enable__' ? trans.saving : trans.enable }}</button>
+              ><AdminIcon name="check" :size="16" /> {{ applyingThemeId === '__mikus_enable__' ? trans.saving : trans.enable }}</button>
               <button
                 @click="disableMikusTheme"
                 class="btn btn-sm"
                 :class="{ 'btn-primary': applyingThemeId !== '__mikus_disable__' && isMikusThemeActive }"
                 :disabled="applyingThemeId === '__mikus_disable__' || !isMikusThemeActive"
-              >✕ {{ applyingThemeId === '__mikus_disable__' ? trans.saving : trans.close }}</button>
-              <a href="https://github.com/mikus-loli/komari-mikus" target="_blank" rel="noopener noreferrer" class="btn btn-sm">↗ {{ trans.view }}</a>
+              ><AdminIcon name="x" :size="16" /> {{ applyingThemeId === '__mikus_disable__' ? trans.saving : trans.close }}</button>
+              <a href="https://github.com/mikus-loli/komari-mikus" target="_blank" rel="noopener noreferrer" class="btn btn-sm"><AdminIcon name="external" :size="16" /> {{ trans.view }}</a>
             </div>
           </div>
         </div>
@@ -112,19 +112,19 @@
             </div>
             <p v-if="getThemeDescription(theme)" class="theme-desc">{{ getThemeDescription(theme) }}</p>
             <div v-if="theme.author" class="theme-author">by {{ theme.author }}</div>
-            
+
             <!-- 版本选择 -->
             <div v-if="theme.versions && theme.versions.length > 0" class="theme-version-selector">
               <label class="version-label">{{ trans.version }}</label>
-              <select 
-                :value="selectedVersions[theme.id] || 0" 
+              <UiSelect
+                :value="selectedVersions[theme.id] || 0"
                 @change="selectVersion(theme.id, $event.target.value)"
                 class="version-select"
               >
                 <option v-for="(v, idx) in theme.versions" :key="v.commitId || idx" :value="idx">
                   {{ getVersionTitle(v) }}
                 </option>
-              </select>
+              </UiSelect>
             </div>
             <div v-else-if="canLoadThemeVersions(theme)" class="theme-version-selector">
               <button
@@ -137,7 +137,7 @@
             <!-- 当前选中版本信息 -->
             <div v-if="getSelectedVersion(theme)" class="theme-version-info">
               <div v-if="getSelectedVersion(theme).releaseDate" class="version-date">
-                📅 {{ getSelectedVersion(theme).releaseDate }}
+                <AdminIcon name="circle" :size="16" /> {{ getSelectedVersion(theme).releaseDate }}
               </div>
               <div v-if="getSelectedVersion(theme).changelog" class="version-changelog">
                 <div class="changelog-label">{{ trans.changelog }}</div>
@@ -150,13 +150,13 @@
                 @click="previewTheme(theme)"
                 class="btn btn-sm"
                 :disabled="!getSelectedThemeUrl(theme) || previewingThemeId === theme.id"
-              >👁 {{ previewingThemeId === theme.id ? trans.saving : trans.preview }}</button>
+              ><AdminIcon name="eye" :size="16" /> {{ previewingThemeId === theme.id ? trans.saving : trans.preview }}</button>
               <button
                 @click="applyTheme(theme)"
                 class="btn btn-sm btn-primary"
                 :disabled="!getSelectedThemeUrl(theme) || applyingThemeId === theme.id"
-              >⇄ {{ applyingThemeId === theme.id ? trans.saving : trans.switchTheme }}</button>
-              <a v-if="getSafeExternalUrl(theme.url)" :href="getSafeExternalUrl(theme.url)" target="_blank" rel="noopener noreferrer" class="btn btn-sm">↗ {{ trans.view }}</a>
+              ><AdminIcon name="refresh" :size="16" /> {{ applyingThemeId === theme.id ? trans.saving : trans.switchTheme }}</button>
+              <a v-if="getSafeExternalUrl(theme.url)" :href="getSafeExternalUrl(theme.url)" target="_blank" rel="noopener noreferrer" class="btn btn-sm"><AdminIcon name="external" :size="16" /> {{ trans.view }}</a>
             </div>
           </div>
         </div>
@@ -166,6 +166,8 @@
 </template>
 
 <script setup>
+import UiSelect from '../../../components/UiSelect.vue'
+import AdminIcon from './AdminIcon.vue'
 import { computed, ref, watch, reactive } from 'vue'
 import http from '../../../utils/http'
 import { currentLang } from '../../../utils/i18n'
@@ -304,7 +306,7 @@ const loadThemes = async () => {
   try {
     const themeStore = await fetchThemeStore()
     themes.value = themeStore.themes
-    
+
     // 初始化选中版本为最新版本（索引0）
     initSelectedVersions(true)
     loaded.value = true

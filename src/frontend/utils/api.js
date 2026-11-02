@@ -281,7 +281,7 @@ export const formatBytes = (bytes) => {
 
 export const isServerOnline = (server, now = Date.now()) => {
   const lastUpdated = normalizeTimestamp(server?.report_timestamp ?? server?.last_updated)
-  return lastUpdated && (now - lastUpdated) < TIME.ONLINE_THRESHOLD_MS
+  return Boolean(lastUpdated && (now - lastUpdated) < TIME.ONLINE_THRESHOLD_MS)
 }
 
 export const fetchServersAll = async () => {

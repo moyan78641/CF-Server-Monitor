@@ -4,6 +4,7 @@ import router from './router'
 import { ADMIN_ENTRY_URL, isAdminPath } from './router/adminEntryUrl'
 import './styles/main.css'
 import './styles/light.css'
+import './styles/public.css'
 import { STORAGE } from './utils/constants'
 import { applyDefaultLanguage, currentLang, normalizeLanguagePreference, resolveLanguagePreference, translations } from './utils/i18n'
 import { http, DEFAULT_REQUEST_TIMEOUT_MS } from './utils/http'
@@ -226,7 +227,7 @@ const showTurnstileError = (title, desc) => {
   if (loading) {
     loading.innerHTML = `
       <div class="loading-content">
-        <div style="font-size: 48px; margin-bottom: 16px;">⚠️</div>
+        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true" style="color:#f85149;margin-bottom:16px"><path d="M12 3 2 21h20L12 3Z"/><path d="M12 9v5m0 3h.01"/></svg>
         <div class="loading-text" style="color: #f85149;">${title}</div>
         <div style="font-size: 12px; color: #6b7280; margin-top: 12px; max-width: 480px; text-align: center; line-height: 1.6;">${desc}</div>
       </div>
@@ -262,7 +263,7 @@ const renderStartupTurnstile = async (siteKey, apiIndex) => {
       if (loading) {
         loading.innerHTML = `
           <div class="loading-content">
-            <div style="font-size: 48px; margin-bottom: 16px;">❌</div>
+            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true" style="color:#f85149;margin-bottom:16px"><path d="M12 3 2 21h20L12 3Z"/><path d="M12 9v5m0 3h.01"/></svg>
             <div class="loading-text" style="color: #f85149;">${trans().verificationFailed}</div>
             <div style="font-size: 12px; color: #6b7280; margin-top: 8px;">${trans().refreshToRetry}</div>
           </div>
@@ -276,7 +277,7 @@ const renderStartupTurnstile = async (siteKey, apiIndex) => {
     if (loading) {
       loading.innerHTML = `
         <div class="loading-content">
-          <div style="font-size: 48px; margin-bottom: 16px;">❌</div>
+          <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true" style="color:#f85149;margin-bottom:16px"><path d="M12 3 2 21h20L12 3Z"/><path d="M12 9v5m0 3h.01"/></svg>
           <div class="loading-text" style="color: #f85149;">${trans().verificationError}</div>
           <div style="font-size: 12px; color: #6b7280; margin-top: 8px;">${trans().refreshToRetry}</div>
         </div>
@@ -346,6 +347,10 @@ async function initApp() {
   }
 
   applyDefaultTheme(config?.preferred_theme)
+  if (config?.site_title) {
+    document.title = config.site_title
+    try { localStorage.setItem('monitor_site_title', config.site_title) } catch (_) {}
+  }
   await applyDefaultLanguage(config?.default_language)
   applyStartupThemeOptions(config)
 
@@ -371,9 +376,7 @@ async function initApp() {
     }
     const loading = document.getElementById('loading')
     if (loading) {
-      setTimeout(() => {
-        loading.remove()
-      }, 1000)
+      loading.remove()
     }
   })
 }
