@@ -4,8 +4,8 @@
       <div><h2>{{ trans.servers }}<span class="admin-count-pill">{{ servers.length }}</span></h2></div>
       <div class="admin-inline-actions"><button class="btn" @click="$emit('auto-discovery-cmd')"><AdminIcon name="zap" :size="16" />{{ trans.autoAdd }}</button><button class="btn btn-primary" aria-haspopup="dialog" @click="toggleAdding"><AdminIcon name="plus" :size="17" />{{ trans.addServer }}</button></div>
     </div>
-    <Teleport to=".admin-app">
-    <div v-if="adding" class="modal-overlay active" @click.self="adding = false">
+    <Teleport v-if="adding" to=".admin-app">
+    <div class="modal-overlay active" @click.self="adding = false">
       <form class="modal-dialog admin-add-server-dialog" @submit.prevent="$emit('add-server')">
         <div class="modal-header"><div class="modal-title">{{ trans.addServer }}</div><button type="button" class="modal-close" :aria-label="trans.close" @click="adding = false"><AdminIcon name="x" :size="16" /></button></div>
         <div class="form-group"><label for="new-server-name" class="form-label">{{ trans.serverName }} <span class="required">*</span></label><input id="new-server-name" ref="nameInput" type="text" v-model="newServerName" required class="form-input" :placeholder="trans.serverName" autocomplete="off" /></div>
